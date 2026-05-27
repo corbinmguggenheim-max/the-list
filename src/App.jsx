@@ -106,12 +106,8 @@ function toSupabasePlace(place) {
 }
 
 function App() {
-  const [token, setToken] = useState(
-  localStorage.getItem("mapboxToken") || ""
-  );
-  const [mapStarted, setMapStarted] = useState(
-  !!localStorage.getItem("mapboxToken")
-  );
+  const token = import.meta.env.VITE_MAPBOX_TOKEN;
+  const [mapStarted, setMapStarted] = useState(!!token);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [places, setPlaces] = useState([]);
   const [newName, setNewName] = useState("");
@@ -607,52 +603,7 @@ return (
     </div>
   </div>
 )}
-      {!mapStarted && (
-        <div
-          style={{
-            position: "absolute",
-            zIndex: 10,
-            top: 20,
-            left: 20,
-            background: "white",
-            padding: 20,
-            borderRadius: 16,
-            boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
-            width: 320,
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>THE LIST</h2>
-
-          <input
-            placeholder="Paste Mapbox Token"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            style={{
-              width: "100%",
-              padding: 12,
-              borderRadius: 10,
-              border: "1px solid #ccc",
-              marginBottom: 12,
-            }}
-          />
-
-          <button
-            onClick={startMap}
-            style={{
-              width: "100%",
-              padding: 12,
-              borderRadius: 10,
-              border: "none",
-              background: "#1E2E45",
-              color: "white",
-              cursor: "pointer",
-            }}
-          >
-            Launch THE LIST
-          </button>
-        </div>
-      )}
-
+      
 <input
   placeholder="Search THE LIST"
   value={searchQuery}
