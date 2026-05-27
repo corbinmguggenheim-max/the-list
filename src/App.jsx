@@ -121,6 +121,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [session, setSession] = useState(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -753,6 +754,23 @@ return (
   }}
 >
   Reset View
+</button>
+
+<button
+  onClick={() => setMenuOpen(!menuOpen)}
+  style={{
+  position: "absolute",
+  zIndex: 9999,
+  top: 24,
+  right: 24,
+  background: "red",
+  color: "white",
+  border: "4px solid yellow",
+  padding: "20px",
+  fontSize: 32,
+}}
+>
+  ☰
 </button>
 
 <button
