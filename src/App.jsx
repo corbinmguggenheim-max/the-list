@@ -759,16 +759,22 @@ return (
 <button
   onClick={() => setMenuOpen(!menuOpen)}
   style={{
-  position: "absolute",
-  zIndex: 9999,
-  top: 24,
-  right: 24,
-  background: "red",
-  color: "white",
-  border: "4px solid yellow",
-  padding: "20px",
-  fontSize: 32,
-}}
+    position: "absolute",
+    zIndex: 40,
+    top: isMobile ? 196 : 132,
+    right: isMobile ? 16 : 24,
+    background: "rgba(255,255,255,0.92)",
+    color: "#1E2E45",
+    border: "none",
+    padding: "12px 16px",
+    borderRadius: 999,
+    cursor: "pointer",
+    boxShadow:
+      "0 12px 30px rgba(15,23,42,0.10), 0 4px 12px rgba(15,23,42,0.06)",
+    fontSize: 20,
+    lineHeight: 1,
+    backdropFilter: "blur(10px)",
+  }}
 >
   ☰
 </button>
