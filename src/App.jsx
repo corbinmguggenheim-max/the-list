@@ -534,7 +534,7 @@ async function signIn() {
   const { error } = await supabase.auth.signInWithOtp({
   email: cleanEmail,
   options: {
-    emailRedirectTo: window.location.origin,
+    emailRedirectTo: "https://the-list-zeta.vercel.app" ,
   },
 });
 
