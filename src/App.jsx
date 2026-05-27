@@ -532,8 +532,11 @@ async function signIn() {
   }
 
   const { error } = await supabase.auth.signInWithOtp({
-    email: cleanEmail,
-  });
+  email: cleanEmail,
+  options: {
+    emailRedirectTo: window.location.origin,
+  },
+});
 
   if (error) {
     alert(error.message);
