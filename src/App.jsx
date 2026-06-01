@@ -626,9 +626,9 @@ return (
     top: 0,
     left: 0,
     right: 0,
-    height: 76,
-    display: "grid",
+    height: isMobile ? 126 : 76,
     gridTemplateColumns: isMobile ? "1fr auto" : "220px 1fr 80px",
+    gridTemplateRows: isMobile ? "auto auto" : "auto",
     alignItems: "center",
     gap: 16,
     padding: isMobile ? "14px 16px" : "14px 24px",
@@ -656,6 +656,8 @@ return (
     display: "flex",
     justifyContent: "center",
     width: "100%",
+    gridColumn: isMobile ? "1 / -1" : "auto",
+    gridRow: isMobile ? 2 : "auto",
   }}
 >
   <input
@@ -826,29 +828,6 @@ return (
   }}
 >
   Reset View
-</button>
-
-<button
-  onClick={() => setMenuOpen(!menuOpen)}
-  style={{
-    position: "absolute",
-    zIndex: 40,
-    top: isMobile ? 196 : 132,
-    right: isMobile ? 16 : 24,
-    background: "rgba(255,255,255,0.92)",
-    color: "#1E2E45",
-    border: "none",
-    padding: "12px 16px",
-    borderRadius: 999,
-    cursor: "pointer",
-    boxShadow:
-      "0 12px 30px rgba(15,23,42,0.10), 0 4px 12px rgba(15,23,42,0.06)",
-    fontSize: 20,
-    lineHeight: 1,
-    backdropFilter: "blur(10px)",
-  }}
->
-  ☰
 </button>
 
 {menuOpen && (
