@@ -887,11 +887,22 @@ return (
 </button>
 
 {menuOpen && (
+   <>
+    <div
+      onClick={() => setMenuOpen(false)}
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 190,
+        background: "transparent",
+      }}
+    />
+
   <div
     style={{
       position: "absolute",
-      zIndex: 50,
-      top: isMobile ? 250 : 186,
+      zIndex: 200,
+      top: isMobile ? 64 : 76,
       right: isMobile ? 16 : 24,
       width: 190,
       background: "rgba(255,255,255,0.96)",
@@ -963,6 +974,7 @@ return (
   Sign Out
 </button>
   </div>
+  </>
 )}
 
 <input
