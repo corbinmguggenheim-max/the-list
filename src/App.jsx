@@ -743,6 +743,7 @@ return (
   {filteredPlaces.length !== 1 ? "s" : ""}
 </p>
 
+{!selectedPlace && (
 <div
   style={{
     position: "absolute",
@@ -813,6 +814,7 @@ return (
     </div>
   )}
 </div>
+)}
 
 <button
   onClick={() => setShowAddSpot(true)}
