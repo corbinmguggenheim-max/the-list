@@ -529,11 +529,11 @@ async function signIn() {
   }
 
   const { error } = await supabase.auth.signInWithOtp({
-  email: cleanEmail,
-  options: {
-    emailRedirectTo: "https://the-list-zeta.vercel.app" ,
-  },
-});
+    email: cleanEmail,
+    options: {
+      emailRedirectTo: "https://the-list-zeta.vercel.app",
+    },
+  });
 
   if (error) {
     alert(error.message);
@@ -541,22 +541,34 @@ async function signIn() {
     alert("Check your email for your login link.");
   }
 }
-
 async function signOut() {
   await supabase.auth.signOut();
 }
 
+const menuButtonStyle = {
+  width: "100%",
+  border: "none",
+  background: "transparent",
+  padding: "11px 12px",
+  borderRadius: 12,
+  textAlign: "left",
+  cursor: "pointer",
+  color: "#1E2E45",
+  fontSize: 14,
+  fontWeight: 500,
+};
+
 return (
-    <div
-      style={{
-        height: "100vh",
-        width: "100vw",
-        position: "relative",
-        overflow: "auto",
-        fontFamily: appFont,
-        background: "#F6F1E8",
-      }}
-    >
+  <div
+    style={{
+      height: "100vh",
+      width: "100vw",
+      position: "relative",
+      overflow: "auto",
+      fontFamily: appFont,
+      background: "#F6F1E8",
+    }}
+  >
     {!session && (
   <div
     style={{
@@ -778,6 +790,64 @@ return (
 >
   ☰
 </button>
+
+{menuOpen && (
+  <div
+    style={{
+      position: "absolute",
+      zIndex: 50,
+      top: isMobile ? 250 : 186,
+      right: isMobile ? 16 : 24,
+      width: 190,
+      background: "rgba(255,255,255,0.96)",
+      backdropFilter: "blur(14px)",
+      borderRadius: 20,
+      padding: 10,
+      boxShadow:
+        "0 20px 60px rgba(15,23,42,0.16), 0 8px 24px rgba(15,23,42,0.08)",
+      border: "1px solid rgba(15,23,42,0.06)",
+    }}
+  >
+    <button
+      onClick={() => {
+        const data = JSON.stringify(places, null, 2);
+        const blob = new Blob([data], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "the-list-backup.json";
+        link.click();
+
+        URL.revokeObjectURL(url);
+        setMenuOpen(false);
+      }}
+      style={menuButtonStyle}
+    >
+      Export
+    </button>
+
+    <button
+      onClick={() => {
+        document.getElementById("import-backup-input").click();
+        setMenuOpen(false);
+      }}
+      style={menuButtonStyle}
+    >
+      Import
+    </button>
+
+    <button
+      onClick={signOut}
+      style={{
+        ...menuButtonStyle,
+        color: "#D9534F",
+      }}
+    >
+      Sign Out
+    </button>
+  </div>
+)}
 
 <button
   onClick={signOut}
