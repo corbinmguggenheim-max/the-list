@@ -105,6 +105,21 @@ function toSupabasePlace(place) {
   };
 }
 
+function formatUserName(email) {
+  if (!email) return "Unknown";
+
+  const namePart = email.split("@")[0];
+
+  return namePart
+    .split(/[._-]/)
+    .filter(Boolean)
+    .map(
+      (part) =>
+        part.charAt(0).toUpperCase() + part.slice(1)
+    )
+    .join(" ");
+}
+
 function App() {
   const token = import.meta.env.VITE_MAPBOX_TOKEN;
   console.log("Token exists:", !!token);
@@ -124,6 +139,7 @@ function App() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [session, setSession] = useState(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -237,6 +253,7 @@ if (imageFile) {
       selectedMapboxPlace?.properties?.place_formatted || newNeighborhood,
     
     status: "Wishlist",
+    created_by: session?.user?.email,
     
     type:
       selectedMapboxPlace?.properties?.feature_type === 
@@ -730,40 +747,70 @@ return (
   style={{
     position: "absolute",
     zIndex: 30,
-    top: 112,
+    top: isMobile ? 202 : 112,
     left: 24,
-    display: "flex",
-    gap: 8,
-    flexWrap: isMobile ? "nowrap" : "wrap",
-    maxWidth: isMobile ? "calc(100vw - 32px)" : 420,
-    overflowX: isMobile ? "auto" : "visible",
-    paddingBottom: 4,
   }}
 >
-  {["All", "Restaurant", "Cocktail Bar", "Wishlist", "Scored 9+"].map(
-    (filter) => (
-      <button
-        key={filter}
-        onClick={() => setActiveFilter(filter)}
-        style={{
-          padding: "8px 12px",
-          borderRadius: 999,
-          border:
-            activeFilter === filter
-              ? "1px solid #1E2E45"
-              : "1px solid rgba(0,0,0,0.08)",
-          background:
-            activeFilter === filter
-              ? "#1E2E45"
-              : "rgba(255,255,255,0.86)",
-          color: activeFilter === filter ? "white" : "#1E2E45",
-          cursor: "pointer",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
-        }}
-      >
-        {filter}
-      </button>
-    )
+  <button
+    onClick={() => setFiltersOpen(!filtersOpen)}
+    style={{
+      padding: "10px 16px",
+      borderRadius: 999,
+      border: "1px solid rgba(0,0,0,0.12)",
+      background: "rgba(255,255,255,0.94)",
+      color: "#1E2E45",
+      cursor: "pointer",
+      boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+      fontSize: 14,
+      fontWeight: 500,
+    }}
+  >
+    Filters
+  </button>
+
+  {filtersOpen && (
+    <div
+      style={{
+        marginTop: 10,
+        width: 190,
+        background: "rgba(255,255,255,0.96)",
+        backdropFilter: "blur(14px)",
+        borderRadius: 18,
+        padding: 8,
+        boxShadow:
+          "0 20px 60px rgba(15,23,42,0.16), 0 8px 24px rgba(15,23,42,0.08)",
+        border: "1px solid rgba(15,23,42,0.06)",
+      }}
+    >
+      {["All", "Restaurant", "Cocktail Bar", "Wishlist", "Scored 9+"].map(
+        (filter) => (
+          <button
+            key={filter}
+            onClick={() => {
+              setActiveFilter(filter);
+              setFiltersOpen(false);
+            }}
+            style={{
+              width: "100%",
+              border: "none",
+              background:
+                activeFilter === filter
+                  ? "rgba(30,46,69,0.08)"
+                  : "transparent",
+              padding: "10px 12px",
+              borderRadius: 12,
+              textAlign: "left",
+              cursor: "pointer",
+              color: "#1E2E45",
+              fontSize: 14,
+              fontWeight: activeFilter === filter ? 600 : 500,
+            }}
+          >
+            {filter}
+          </button>
+        )
+      )}
+    </div>
   )}
 </div>
 
@@ -855,43 +902,64 @@ return (
     }}
   >
     <button
-      onClick={() => {
-        const data = JSON.stringify(places, null, 2);
-        const blob = new Blob([data], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
+  onClick={() => {
+    const data = JSON.stringify(places, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
 
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "the-list-backup.json";
-        link.click();
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "the-list-backup.json";
+    link.click();
 
-        URL.revokeObjectURL(url);
-        setMenuOpen(false);
-      }}
-      style={menuButtonStyle}
-    >
-      Export
-    </button>
+    URL.revokeObjectURL(url);
+    setMenuOpen(false);
+  }}
+  style={menuButtonStyle}
+>
+  Export
+</button>
 
-    <button
-      onClick={() => {
-        document.getElementById("import-backup-input").click();
-        setMenuOpen(false);
-      }}
-      style={menuButtonStyle}
-    >
-      Import
-    </button>
+<button
+  onClick={() => {
+    document.getElementById("import-backup-input").click();
+    setMenuOpen(false);
+  }}
+  style={menuButtonStyle}
+>
+  Import
+</button>
 
-    <button
-      onClick={signOut}
-      style={{
-        ...menuButtonStyle,
-        color: "#D9534F",
-      }}
-    >
-      Sign Out
-    </button>
+<button
+  onClick={() => {
+    alert("Feature request form coming soon.");
+    setMenuOpen(false);
+  }}
+  style={menuButtonStyle}
+>
+  Request Feature
+</button>
+
+<div
+  style={{
+    height: 1,
+    background: "rgba(0,0,0,0.12)",
+    margin: "10px 0",
+  }}
+/>
+
+<button
+  onClick={() => {
+    signOut();
+    setMenuOpen(false);
+  }}
+  style={{
+    ...menuButtonStyle,
+    color: "#D9534F",
+  }}
+>
+  Sign Out
+</button>
   </div>
 )}
 
@@ -1111,6 +1179,17 @@ return (
     padding: 0,
   }}
 />
+
+<p
+  style={{
+    margin: "8px 0 12px",
+    fontSize: 13,
+    color: "#6B7280",
+    letterSpacing: 0.3,
+  }}
+>
+  Added by {formatUserName(selectedPlace.created_by)}
+</p>
 
     <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
   <input
