@@ -1104,8 +1104,8 @@ return (
       zIndex: 20,
       left: isMobile ? 16 : "auto",
       right: isMobile ? 16 : 24,
-      bottom: isMobile ? "auto" : 120,
-      top: isMobile ? 16 : "auto",
+      top: isMobile ? 148 : 120,
+      bottom: "auto",
       width: 
         isMobile 
           ? "calc(100vw - 32px)" 
