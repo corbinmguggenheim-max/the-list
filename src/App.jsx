@@ -107,6 +107,8 @@ function toSupabasePlace(place) {
 
 function App() {
   const token = import.meta.env.VITE_MAPBOX_TOKEN;
+  console.log("Token exists:", !!token);
+  console.log("Token preview:", token?.substring(0, 10));
   const [mapStarted, setMapStarted] = useState(!!token);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [places, setPlaces] = useState([]);
@@ -616,30 +618,83 @@ return (
     </div>
   </div>
 )}
-      
-<input
-  placeholder="Search THE LIST"
-  value={searchQuery}
-  onChange={(e) => setSearchQuery(e.target.value)}
+
+<div
   style={{
     position: "absolute",
-    zIndex: 15,
-    top: 24,
-    left: 24,
-    width:
-      isMobile
-        ? "calc(100vw - 32px)"
-        : 320,
-    padding: "14px 18px",
-    borderRadius: 999,
-    border: "none",
-    background: "rgba(255,255,255,0.92)",
-    backdropFilter: "blur(14px)",
-    boxShadow: "0 14px 40px rgba(0,0,0,0.12)",
-    fontSize: 15,
-    outline: "none",
+    zIndex: 60,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 76,
+    display: "grid",
+    gridTemplateColumns: isMobile ? "1fr auto" : "220px 1fr 80px",
+    alignItems: "center",
+    gap: 16,
+    padding: isMobile ? "14px 16px" : "14px 24px",
+    background: "#FFFFFF",
+    backdropFilter: "blur(18px)",
+    borderBottom: "3px solid #000000",
   }}
-/>
+>
+  <div
+    style={{
+      fontFamily: "'Times New Roman', serif",
+      fontWeight: 300,
+      letterSpacing: -1,
+      fontSize: isMobile ? 28 : 36,
+      color: "#000000",
+      letterSpacing: -0.8,
+      whiteSpace: "nowrap",
+    }}
+  >
+    The List
+  </div>
+
+  <div
+  style={{
+    display: "flex",
+    justifyContent: "center",
+    width: "100%",
+  }}
+>
+  <input
+    placeholder="Search THE LIST"
+    value={searchQuery}
+    onChange={(e) => setSearchQuery(e.target.value)}
+    style={{
+      width: isMobile ? "100%" : 600,
+      maxWidth: "100%",
+      padding: "12px 18px",
+      borderRadius: 999,
+      border: "1px solid rgba(0,0,0,0.08)",
+      background: "white",
+      fontSize: 15,
+      outline: "none",
+    }}
+  />
+</div>
+
+  <button
+    onClick={() => setMenuOpen(!menuOpen)}
+    style={{
+      justifySelf: "end",
+      background: "rgba(255,255,255,0.92)",
+      color: "#1E2E45",
+      border: "none",
+      padding: "12px 16px",
+      borderRadius: 999,
+      cursor: "pointer",
+      boxShadow:
+        "0 12px 30px rgba(15,23,42,0.10), 0 4px 12px rgba(15,23,42,0.06)",
+      fontSize: 20,
+      lineHeight: 1,
+      backdropFilter: "blur(10px)",
+    }}
+  >
+    ☰
+  </button>
+</div>
 
 <p
   style={{
@@ -735,18 +790,23 @@ return (
 
 <button
   onClick={() => {
-    mapRef.current.flyTo({
-      center: [-73.9851, 40.7589],
-      zoom: 11.4,
-      speed: 0.9,
-      curve: 1.4,
-      essential: true,
-    });
+  if (!mapRef.current) {
+    alert("Map is still loading.");
+    return;
+  }
 
-    setSelectedPlace(null);
-    setSearchQuery("");
-    setActiveFilter("All");
-  }}
+  mapRef.current.flyTo({
+    center: [-73.9851, 40.7589],
+    zoom: 11.4,
+    speed: 0.9,
+    curve: 1.4,
+    essential: true,
+  });
+
+  setSelectedPlace(null);
+  setSearchQuery("");
+  setActiveFilter("All");
+}}
   style={{
     position: "absolute",
     zIndex: 15,
