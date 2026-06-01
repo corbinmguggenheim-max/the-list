@@ -748,7 +748,7 @@ return (
   style={{
     position: "absolute",
     zIndex: 30,
-    top: isMobile ? 202 : 112,
+    top: isMobile ? 148 : 112,
     left: 24,
   }}
 >
