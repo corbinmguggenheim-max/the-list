@@ -626,8 +626,9 @@ return (
     top: 0,
     left: 0,
     right: 0,
-    height: isMobile ? 126 : 76,
-    gridTemplateColumns: isMobile ? "1fr auto" : "220px 1fr 80px",
+    height: isMobile ? 132 : 76,
+    display: "grid",
+    gridTemplateColumns: isMobile ? "48px 1fr 48px" : "220px 1fr 80px",
     gridTemplateRows: isMobile ? "auto auto" : "auto",
     alignItems: "center",
     gap: 16,
@@ -646,6 +647,9 @@ return (
       color: "#000000",
       letterSpacing: -0.8,
       whiteSpace: "nowrap",
+      gridColumn: isMobile ? 2 : "auto",
+      gridRow: 1,
+      textAlign: isMobile ? "center" : "left",
     }}
   >
     The List
@@ -692,6 +696,9 @@ return (
       fontSize: 20,
       lineHeight: 1,
       backdropFilter: "blur(10px)",
+      gridColumn: isMobile ? 3 : "auto",
+      gridRow: 1,
+      justifySelf: "end",
     }}
   >
     ☰
@@ -771,7 +778,7 @@ return (
   style={{
   position: "absolute",
   zIndex: 15,
-  top: isMobile ? 88 : 24,
+  top: isMobile ? 148 : 24,
   right: isMobile ? 16 : 24,
   background: "#1E2E45",
   color: "white",
@@ -812,7 +819,7 @@ return (
   style={{
     position: "absolute",
     zIndex: 15,
-    top: isMobile ? 142 : 78,
+    top: isMobile ? 202 : 78,
     right: isMobile ? 16 : 24,
     background: "rgba(255,255,255,0.92)",
     color: "#1E2E45",
