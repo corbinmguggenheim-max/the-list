@@ -700,7 +700,7 @@ return (
 
   <button
     onClick={() => {
-      setMenuOpen(!menuOpen);
+      setMenuOpen((current) => !current);
       setFiltersOpen(false);
     }}
     style={{
@@ -728,7 +728,7 @@ return (
 <p
   style={{
     position: "absolute",
-    zIndex: 30,
+    zIndex: 200,
     top: 78,
     left: 38,
     fontSize: 13,
@@ -747,94 +747,94 @@ return (
 </p>
 
 {!selectedPlace && (
-<div
-  style={{
-    position: "absolute",
-    zIndex: 30,
-    top: isMobile ? 148 : 112,
-    left: 24,
-  }}
->
-  <button
-    onClick={() => {
-  setFiltersOpen(!filtersOpen);
-  setMenuOpen(false);
-  }}
+  <div
     style={{
-      padding: "10px 16px",
-      borderRadius: 999,
-      border: "1px solid rgba(0,0,0,0.12)",
-      background: "rgba(255,255,255,0.94)",
-      color: "#1E2E45",
-      cursor: "pointer",
-      boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
-      fontSize: 14,
-      fontWeight: 500,
+      position: "absolute",
+      zIndex: 30,
+      top: isMobile ? 148 : 112,
+      left: 24,
     }}
   >
-    Filters
-  </button>
+    <button
+      onClick={() => {
+        setFiltersOpen((current) => !current);
+        setMenuOpen(false);
+      }}
+      style={{
+        padding: "10px 16px",
+        borderRadius: 999,
+        border: "1px solid rgba(0,0,0,0.12)",
+        background: "rgba(255,255,255,0.94)",
+        color: "#1E2E45",
+        cursor: "pointer",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+        fontSize: 14,
+        fontWeight: 500,
+      }}
+    >
+      Filters
+    </button>
 
   {filtersOpen && (
   <>
     <div
       onClick={() => setFiltersOpen(false)}
       style={{
-        position: "absolute",
+        position: "fixed",
         inset: 0,
-        zIndex: 25,
+        zIndex: 29,
         background: "transparent",
+        cursor: "default",
       }}
     />
 
     <div
-      onClick={(event) => event.stopPropagation()}
-      style={{
-        position: "relative",
-        zIndex: 30,
-        marginTop: 10,
-        width: 190,
-        background: "rgba(255,255,255,0.96)",
-        backdropFilter: "blur(14px)",
-        borderRadius: 18,
-        padding: 8,
-        boxShadow:
-          "0 20px 60px rgba(15,23,42,0.16), 0 8px 24px rgba(15,23,42,0.08)",
-        border: "1px solid rgba(15,23,42,0.06)",
-      }}
-    >
-      {["All", "Restaurant", "Cocktail Bar", "Wishlist", "Scored 9+"].map(
-        (filter) => (
-          <button
-            key={filter}
-            onClick={() => {
-              setActiveFilter(filter);
-              setFiltersOpen(false);
-            }}
-            style={{
-              width: "100%",
-              border: "none",
-              background:
-                activeFilter === filter
-                  ? "rgba(30,46,69,0.08)"
-                  : "transparent",
-              padding: "10px 12px",
-              borderRadius: 12,
-              textAlign: "left",
-              cursor: "pointer",
-              color: "#1E2E45",
-              fontSize: 14,
-              fontWeight: activeFilter === filter ? 600 : 500,
-            }}
-          >
-            {filter}
-          </button>
-        )
-      )}
-    </div>
-    </>
-  )}
-</div>
+        style={{
+          position: "relative",
+          zIndex: 31,
+          marginTop: 10,
+          width: 190,
+          background: "rgba(255,255,255,0.96)",
+          backdropFilter: "blur(14px)",
+          borderRadius: 18,
+          padding: 8,
+          boxShadow:
+            "0 20px 60px rgba(15,23,42,0.16), 0 8px 24px rgba(15,23,42,0.08)",
+          border: "1px solid rgba(15,23,42,0.06)",
+        }}
+      >
+        {["All", "Restaurant", "Cocktail Bar", "Wishlist", "Scored 9+"].map(
+          (filter) => (
+            <button
+              key={filter}
+              onClick={() => {
+                setActiveFilter(filter);
+                setFiltersOpen(false);
+              }}
+              style={{
+                width: "100%",
+                border: "none",
+                background:
+                  activeFilter === filter
+                    ? "rgba(30,46,69,0.08)"
+                    : "transparent",
+                padding: "10px 12px",
+                borderRadius: 12,
+                textAlign: "left",
+                cursor: "pointer",
+                color: "#1E2E45",
+                fontSize: 14,
+                fontWeight: activeFilter === filter ? 600 : 500,
+              }}
+            >
+              {filter}
+            </button>
+          )
+        )}
+      </div>
+      </>
+    )}
+  </div>
 )}
 
 <button
@@ -914,7 +914,7 @@ return (
       style={{
         position: "absolute",
         inset: 0,
-        zIndex: 190,
+        zIndex: 20,
         background: "transparent",
       }}
     />
