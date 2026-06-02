@@ -783,18 +783,17 @@ return (
           border: "1px solid rgba(15,23,42,0.06)",
         }}
       >
-       {[
-          `All (${places.length})`,
-          "Restaurant",
-          "Cocktail Bar",
-          "Wishlist",
-          "Scored 9+",
-        ].map(
-          (filter) => (
+      {[
+          { label: `All (${places.length})`, value: "All" },
+          { label: "Restaurant", value: "Restaurant" },
+          { label: "Cocktail Bar", value: "Cocktail Bar" },
+          { label: "Wishlist", value: "Wishlist" },
+          { label: "Scored 9+", value: "Scored 9+" },
+        ].map((filter) => (
             <button
-              key={filter}
+              key={filter.value}
               onClick={() => {
-                setActiveFilter(filter);
+                setActiveFilter(filter.value);
                 setFiltersOpen(false);
               }}
               style={{
@@ -810,10 +809,10 @@ return (
                 cursor: "pointer",
                 color: "#1E2E45",
                 fontSize: 14,
-                fontWeight: activeFilter === filter ? 600 : 500,
+                fontWeight: activeFilter === filter.value ? 600 : 500,
               }}
             >
-              {filter}
+              {filter.label}
             </button>
           )
         )}
