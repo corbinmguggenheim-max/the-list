@@ -725,26 +725,6 @@ return (
   </button>
 </div>
 
-<p
-  style={{
-    position: "absolute",
-    zIndex: 200,
-    top: 78,
-    left: 38,
-    fontSize: 13,
-    color: "#6B7280",
-    margin: 0,
-    letterSpacing: 0.4,
-    background: "rgba(255,255,255,0.82)",
-    padding: "4px 10px",
-    borderRadius: 999,
-    backdropFilter: "blur(10px)",
-    boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
-  }}
->
-  {filteredPlaces.length} place
-  {filteredPlaces.length !== 1 ? "s" : ""}
-</p>
 
 {!selectedPlace && (
   <div
@@ -803,7 +783,13 @@ return (
           border: "1px solid rgba(15,23,42,0.06)",
         }}
       >
-        {["All", "Restaurant", "Cocktail Bar", "Wishlist", "Scored 9+"].map(
+       {[
+          `All (${places.length})`,
+          "Restaurant",
+          "Cocktail Bar",
+          "Wishlist",
+          "Scored 9+",
+        ].map(
           (filter) => (
             <button
               key={filter}
