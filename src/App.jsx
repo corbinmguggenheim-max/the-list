@@ -756,8 +756,9 @@ return (
   }}
 >
   <button
-    onClick={() => {
-      setFiltersOpen(!filtersOpen);
+    onClick={(event) => {
+      event.stoppropogation();
+      setFiltersOpen((current) => !current);
       setMenuOpen(false);
     }}
     style={{
@@ -788,6 +789,7 @@ return (
     />
 
     <div
+      onClick={(event) => event.stopPropagation()}
       style={{
         zIndex: 30,
         position: "relative",
