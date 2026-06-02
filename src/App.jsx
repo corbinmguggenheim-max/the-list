@@ -699,7 +699,10 @@ return (
 </div>
 
   <button
-    onClick={() => setMenuOpen(!menuOpen)}
+    onClick={() => {
+      setMenuOpen(!menuOpen);
+      setFiltersOpen(false);
+    }}
     style={{
       justifySelf: "end",
       background: "rgba(255,255,255,0.92)",
@@ -753,7 +756,10 @@ return (
   }}
 >
   <button
-    onClick={() => setFiltersOpen(!filtersOpen)}
+    onClick={() => {
+      setFiltersOpen(!filtersOpen);
+      setMenuOpen(false);
+    }}
     style={{
       padding: "10px 16px",
       borderRadius: 999,
@@ -770,8 +776,21 @@ return (
   </button>
 
   {filtersOpen && (
+  <>
+    <div
+      onClick={() => setFiltersOpen(false)}
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 25,
+        background: "transparent",
+      }}
+    />
+
     <div
       style={{
+        zIndex: 30,
+        position: "relative",
         marginTop: 10,
         width: 190,
         background: "rgba(255,255,255,0.96)",
@@ -812,6 +831,7 @@ return (
         )
       )}
     </div>
+    </>
   )}
 </div>
 )}
