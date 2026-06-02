@@ -791,8 +791,8 @@ return (
     <div
       onClick={(event) => event.stopPropagation()}
       style={{
-        zIndex: 30,
         position: "relative",
+        zIndex: 30,
         marginTop: 10,
         width: 190,
         background: "rgba(255,255,255,0.96)",
