@@ -756,11 +756,10 @@ return (
   }}
 >
   <button
-    onClick={(event) => {
-      event.stoppropogation();
-      setFiltersOpen((current) => !current);
-      setMenuOpen(false);
-    }}
+    onClick={() => {
+  setFiltersOpen(!filtersOpen);
+  setMenuOpen(false);
+  }}
     style={{
       padding: "10px 16px",
       borderRadius: 999,
