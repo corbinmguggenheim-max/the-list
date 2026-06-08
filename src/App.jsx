@@ -1245,28 +1245,7 @@ return (
     fontFamily: appFont,
   }}
 />
-  onChange={(e) => {
-    const updatedPlace = {
-      ...selectedPlace,
-      name: e.target.value,
-    };
 
-    updatePlace(updatedPlace);
-  }}
-  style={{
-    width: "100%",
-    fontSize: 32,
-    fontWeight: 500,
-    color: "#1E2E45",
-    letterSpacing: -0.6,
-    border: "none",
-    background: "transparent",
-    fontFamily: "Georgia, serif",
-    outline: "none",
-    marginBottom: 8,
-    padding: 0,
-  }}
-/>
 
 <p
   style={{
