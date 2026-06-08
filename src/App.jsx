@@ -106,18 +106,14 @@ function toSupabasePlace(place) {
 }
 
 function formatUserName(email) {
+  const userNames = {
+    "raventechct@gmail.com": "Corbin Guggenheim",
+    "corbin.m.guggenheim@gmail.com": "Corbin Guggenheim",
+  };
+
   if (!email) return "Unknown";
 
-  const namePart = email.split("@")[0];
-
-  return namePart
-    .split(/[._-]/)
-    .filter(Boolean)
-    .map(
-      (part) =>
-        part.charAt(0).toUpperCase() + part.slice(1)
-    )
-    .join(" ");
+  return userNames[email.toLowerCase()] || email;
 }
 
 const experienceCategories = [
