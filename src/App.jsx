@@ -314,6 +314,7 @@ setSelectedPlace(savedPlace);
 savePlace();
   setNewName("");
   setNewNeighborhood("");
+  setNewCategory("Dinner");
   setNewNotes("");
   setNewImage("");
   setShowAddSpot(false);
@@ -1101,6 +1102,25 @@ return (
     border: "1px solid #ccc",
   }}
 />
+
+<select
+  value={newCategory}
+  onChange={(e) => setNewCategory(e.target.value)}
+  style={{
+    width: "100%",
+    padding: 12,
+    marginBottom: 12,
+    borderRadius: 10,
+    border: "1px solid #ccc",
+    background: "white",
+  }}
+>
+  {experienceCategories.map((category) => (
+    <option key={category} value={category}>
+      {category}
+    </option>
+  ))}
+</select>
 
     <button
       onClick={addSpot}
