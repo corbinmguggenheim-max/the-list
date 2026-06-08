@@ -162,11 +162,24 @@ function App() {
     .toLowerCase()
     .includes(searchQuery.toLowerCase());
 
-  const matchesFilter =
-    activeFilter === "All" ||
-    place.type === activeFilter ||
-    (activeFilter === "Scored 9+" && place.score && place.score >= 9) ||
-    (activeFilter === "Wishlist" && !place.score);
+  const addedBy = place.created_by?.toLowerCase();
+
+const matchesFilter =
+  activeFilter === "All" ||
+  place.type === activeFilter ||
+  (activeFilter === "Scored 9+" && place.score && place.score >= 9) ||
+  (activeFilter === "Wishlist" && !place.score) ||
+  (
+    activeFilter === "Added by Corbin" &&
+    [
+      "raventechct@gmail.com",
+      "corbin.m.guggenheim@gmail.com",
+    ].includes(addedBy)
+  ) ||
+  (
+    activeFilter === "Added by Britni" &&
+    addedBy === "britni.kiosse@gmail.com"
+  );
 
   return matchesSearch && matchesFilter;
 });
@@ -733,7 +746,7 @@ return (
 </div>
 
 
-{!selectedPlace && (
+{!selectedPlace && !showAddSpot && (
   <div
     style={{
       position: "absolute",
@@ -792,14 +805,17 @@ return (
       >
       {[
         { label: `All (${places.length})`, value: "All" },
-       ...experienceCategories.map((category) => ({
-          label: category,
-          value: category,
+        ...experienceCategories.map((category) => ({
+         label: category,
+         value: category,
         })),
+        { label: "Added by Corbin", value: "Added by Corbin" },
+        { label: "Added by Britni", value: "Added by Britni" },
       ].map((filter) => (
             <button
               key={filter.value}
               onClick={() => {
+                console.log("Clicked filter:", filter);
                 setActiveFilter(filter.value);
                 setFiltersOpen(false);
               }}
@@ -807,7 +823,7 @@ return (
                 width: "100%",
                 border: "none",
                 background:
-                  activeFilter === filter
+                  activeFilter === filter.value
                     ? "rgba(30,46,69,0.08)"
                     : "transparent",
                 padding: "10px 12px",
