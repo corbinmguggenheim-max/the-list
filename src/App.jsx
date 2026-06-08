@@ -109,6 +109,7 @@ function formatUserName(email) {
   const userNames = {
     "raventechct@gmail.com": "Corbin Guggenheim",
     "corbin.m.guggenheim@gmail.com": "Corbin Guggenheim",
+    "britni.kiosse@gmail.com": "Britni Kiosse"
   };
 
   if (!email) return "Unknown";
