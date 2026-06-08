@@ -1059,20 +1059,22 @@ return (
       Add Spot
     </h2>
 
-    <SearchBox
-  accessToken={token}
-  options={{
-    proximity: [-73.9851, 40.7589],
-    types: "poi",
-  }}
-  placeholder="Search restaurant or bar"
-  onRetrieve={(result) => {
-    const feature = result.features?.[0] || result;
-    setSelectedMapboxPlace(feature);
-    setNewName(feature.properties.name || "");
-    setNewNeighborhood(feature.properties.place_formatted || "");
-  }}
-/>
+    <div style={{ marginBottom: 16 }}>
+  <SearchBox
+    accessToken={token}
+    options={{
+      proximity: [-73.9851, 40.7589],
+      types: "poi",
+    }}
+    placeholder="Search restaurant or bar"
+    onRetrieve={(result) => {
+      const feature = result.features?.[0] || result;
+      setSelectedMapboxPlace(feature);
+      setNewName(feature.properties.name || "");
+      setNewNeighborhood(feature.properties.place_formatted || "");
+    }}
+  />
+</div>
 
     <input
       placeholder="Neighborhood"
