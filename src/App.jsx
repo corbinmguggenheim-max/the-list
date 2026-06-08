@@ -120,6 +120,18 @@ function formatUserName(email) {
     .join(" ");
 }
 
+const experienceCategories = [
+  "Rooftop",
+  "Dinner",
+  "Brunch",
+  "Floral",
+  "Theme",
+  "Pop-Up",
+  "Dive Bar",
+  "Sports Bar",
+  "Late Night",
+];
+
 function App() {
   const token = import.meta.env.VITE_MAPBOX_TOKEN;
   console.log("Token exists:", !!token);
@@ -135,6 +147,7 @@ function App() {
   const mapRef = useRef(null);
   const markersRef = useRef([]);
   const [showAddSpot, setShowAddSpot] = useState(false);
+  const [newCategory, setNewCategory] = useState("Dinner");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -255,11 +268,7 @@ if (imageFile) {
     status: "Wishlist",
     created_by: session?.user?.email,
     
-    type:
-      selectedMapboxPlace?.properties?.feature_type === 
-      "restaurant"
-        ? "Restaurant"
-        : "Cocktail Bar",
+    type: newCategory,
 
     lnglat: coordinates,
 
@@ -784,12 +793,12 @@ return (
         }}
       >
       {[
-          { label: `All (${places.length})`, value: "All" },
-          { label: "Restaurant", value: "Restaurant" },
-          { label: "Cocktail Bar", value: "Cocktail Bar" },
-          { label: "Wishlist", value: "Wishlist" },
-          { label: "Scored 9+", value: "Scored 9+" },
-        ].map((filter) => (
+        { label: `All (${places.length})`, value: "All" },
+       ...experienceCategories.map((category) => ({
+          label: category,
+          value: category,
+        })),
+      ].map((filter) => (
             <button
               key={filter.value}
               onClick={() => {
