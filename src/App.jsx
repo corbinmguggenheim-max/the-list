@@ -1242,7 +1242,7 @@ return (
     color: "#1E2E45",
     marginBottom: 4,
     background: "transparent",
-    fontFamily: appFont,
+    fontFamily: "Georgia, serif",
   }}
 />
 
