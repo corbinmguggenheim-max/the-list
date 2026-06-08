@@ -1219,8 +1219,32 @@ return (
   />
 )}
 
-    <input
+   <textarea
   value={selectedPlace.name}
+  onChange={(e) => {
+    const updatedPlace = {
+      ...selectedPlace,
+      name: e.target.value,
+    };
+
+    updatePlace(updatedPlace);
+  }}
+  rows={2}
+  style={{
+    width: "100%",
+    border: "none",
+    outline: "none",
+    resize: "none",
+    overflow: "hidden",
+    fontSize: isMobile ? 24 : 30,
+    lineHeight: 1.1,
+    fontWeight: 600,
+    color: "#1E2E45",
+    marginBottom: 4,
+    background: "transparent",
+    fontFamily: appFont,
+  }}
+/>
   onChange={(e) => {
     const updatedPlace = {
       ...selectedPlace,
