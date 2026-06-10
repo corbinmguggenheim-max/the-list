@@ -156,6 +156,7 @@ function App() {
   const [mapReady, setMapReady] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [milestoneMessage, setMilestoneMessage] = useState(null);
 
   const filteredPlaces = places.filter((place) => {
   const matchesSearch = place.name
@@ -319,6 +320,44 @@ if (imageFile) {
 
 setPlaces([...places, savedPlace]);
 setSelectedPlace(savedPlace);
+
+const userEmail = session?.user?.email?.toLowerCase();
+
+const userSpotCount =
+  places.filter(
+    (place) => place.created_by?.toLowerCase() === userEmail
+  ).length + 1;
+
+if (userSpotCount === 1) {
+  setMilestoneMessage({
+    title: "🎉 Your first spot! 🎉",
+    lines: [
+      "You did it!!!",
+      "Buckle up, hold onto your shorts, and go find some spots!",
+      "These are for you 🏆💐",
+    ],
+  });
+}
+
+if (userSpotCount === 5) {
+  setMilestoneMessage({
+    title: "🎉 Five spots! 🎉",
+    lines: [
+      "Look at you, you little animal...",
+      "Ok no more trophies after this one 🏆",
+    ],
+  });
+}
+
+if (userSpotCount === 40) {
+  setMilestoneMessage({
+    title: "🎉 Ten spots! 🎉",
+    lines: [
+      "I said no more trophies.",
+      "I DIDN'T SAY NO MORE FLOWERS 💐💐💐",
+    ],
+  });
+}
 }
 
 savePlace();
@@ -842,6 +881,67 @@ return (
       </div>
       </>
     )}
+  </div>
+)}
+
+{milestoneMessage && (
+  <div
+    style={{
+      position: "absolute",
+      zIndex: 300,
+      inset: 0,
+      background: "rgba(0,0,0,0.28)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+    }}
+  >
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 360,
+        background: "white",
+        borderRadius: 28,
+        padding: 28,
+        textAlign: "center",
+        boxShadow: "0 24px 80px rgba(0,0,0,0.24)",
+      }}
+    >
+      <h2 style={{ marginTop: 0, color: "#1E2E45" }}>
+        {milestoneMessage.title}
+      </h2>
+
+      {milestoneMessage.lines.map((line) => (
+        <p
+          key={line}
+          style={{
+            fontSize: 16,
+            color: "#1E2E45",
+            lineHeight: 1.45,
+            margin: "10px 0",
+          }}
+        >
+          {line}
+        </p>
+      ))}
+
+      <button
+        onClick={() => setMilestoneMessage(null)}
+        style={{
+          marginTop: 16,
+          border: "none",
+          borderRadius: 999,
+          padding: "12px 20px",
+          background: "#1E2E45",
+          color: "white",
+          cursor: "pointer",
+          fontWeight: 600,
+        }}
+      >
+        Let's F*ckin GO!!!
+      </button>
+    </div>
   </div>
 )}
 
