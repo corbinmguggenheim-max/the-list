@@ -349,6 +349,10 @@ if (userSpotCount === 5) {
   });
 }
 
+console.log("Current user:", userEmail);
+console.log("User spot count:", userSpotCount);
+console.log("Saved place created_by:", savedPlace.created_by);
+
 if (userSpotCount === 40) {
   setMilestoneMessage({
     title: "🎉 Ten spots! 🎉",
