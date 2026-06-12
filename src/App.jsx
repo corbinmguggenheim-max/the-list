@@ -330,7 +330,7 @@ const userSpotCount =
 
 if (userSpotCount === 1) {
   setMilestoneMessage({
-    title: "🎉 Your first spot! 🎉",
+    title: "🎉 Britni! Your first spot! 🎉",
     lines: [
       "You did it!!!",
       "Buckle up, hold onto your shorts, and go find some spots!",
@@ -353,7 +353,7 @@ console.log("Current user:", userEmail);
 console.log("User spot count:", userSpotCount);
 console.log("Saved place created_by:", savedPlace.created_by);
 
-if (userSpotCount === 40) {
+if (userSpotCount === 10) {
   setMilestoneMessage({
     title: "🎉 Ten spots! 🎉",
     lines: [
