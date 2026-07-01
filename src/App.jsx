@@ -146,7 +146,7 @@ function App() {
   const [showAddSpot, setShowAddSpot] = useState(false);
   const [newCategory, setNewCategory] = useState("Dinner");
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState("All");
+  const [activeFilter, setActiveFilter] = useState("My Spots");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -171,6 +171,8 @@ const matchesFilter =
   (activeFilter === "Scored 9+" && place.score && place.score >= 9) ||
   (activeFilter === "Wishlist" && !place.score) ||
   (
+    (activeFilter === "My Spots" &&
+  place.owner_email?.toLowerCase() === session?.user?.email?.toLowerCase()) ||
     activeFilter === "Added by Corbin" &&
     [
       "raventechct@gmail.com",
@@ -181,6 +183,7 @@ const matchesFilter =
     activeFilter === "Added by Britni" &&
     addedBy === "britni.kiosse@gmail.com"
   );
+  
 
   return matchesSearch && matchesFilter;
 });
@@ -278,6 +281,7 @@ if (imageFile) {
     
     status: "Wishlist",
     created_by: session?.user?.email,
+    owner_email: session?.user?.email,
     
     type: newCategory,
 
@@ -348,10 +352,6 @@ if (userSpotCount === 5) {
     ],
   });
 }
-
-console.log("Current user:", userEmail);
-console.log("User spot count:", userSpotCount);
-console.log("Saved place created_by:", savedPlace.created_by);
 
 if (userSpotCount === 10) {
   setMilestoneMessage({
@@ -854,6 +854,7 @@ return (
         })),
         { label: "Added by Corbin", value: "Added by Corbin" },
         { label: "Added by Britni", value: "Added by Britni" },
+        { label: "My Spots", value: "My Spots" },
       ].map((filter) => (
             <button
               key={filter.value}
@@ -1308,6 +1309,40 @@ return (
       ×
     </button>
 
+    <input
+  id="replace-place-image-input"
+  type="file"
+  accept="image/*"
+  style={{ display: "none" }}
+  onChange={async (e) => {
+    const file = e.target.files[0];
+    if (!file || !selectedPlace) return;
+
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("place-images")
+      .upload(fileName, file);
+
+    if (uploadError) {
+      alert(uploadError.message);
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from("place-images")
+      .getPublicUrl(fileName);
+
+    const updatedPlace = {
+      ...selectedPlace,
+      image: publicUrlData.publicUrl,
+    };
+
+    updatePlace(updatedPlace);
+  }}
+/>
+
 {selectedPlace.image && (
   <img
     src={selectedPlace.image}
@@ -1361,6 +1396,26 @@ return (
 >
   Added by {formatUserName(selectedPlace.created_by)}
 </p>
+
+<button
+  onClick={() =>
+    document.getElementById("replace-place-image-input").click()
+  }
+  style={{
+    border: "1px solid rgba(0,0,0,0.12)",
+    borderRadius: 999,
+    padding: "9px 14px",
+    background: "white",
+    color: "#1E2E45",
+    cursor: "pointer",
+    fontSize: 13,
+    fontWeight: 500,
+    marginBottom: 12,
+  }}
+>
+  + Add Photo
+</button>
+
 
     <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
   <input
