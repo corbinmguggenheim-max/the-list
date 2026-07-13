@@ -159,7 +159,8 @@ function App() {
   const [showAddSpot, setShowAddSpot] = useState(false);
   const [newCategories, setNewCategories] = useState(["Dinner"]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState("My Spots");
+  const [activeViewFilter, setActiveViewFilter] = useState("My Spots");
+  const [activeCategoryFilters, setActiveCategoryFilters] = useState([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -181,25 +182,33 @@ function App() {
 
   const addedBy = place.created_by?.toLowerCase();
 
-const matchesFilter =
-  activeFilter === "All" ||
-  place.categories?.includes(activeFilter) ||
-  place.type === activeFilter ||
-  (activeFilter === "Scored 9+" && place.score && place.score >= 9) ||
-  (activeFilter === "Wishlist" && !place.score) ||
+const matchesViewFilter =
+  activeViewFilter === "All" ||
   (
-    (activeFilter === "My Spots" &&
-  place.owner_email?.toLowerCase() === session?.user?.email?.toLowerCase()) ||
-    activeFilter === "Added by Corbin" &&
+    activeViewFilter === "My Spots" &&
+    place.owner_email?.toLowerCase() ===
+      session?.user?.email?.toLowerCase()
+  ) ||
+  (
+    activeViewFilter === "Added by Corbin" &&
     [
       "raventechct@gmail.com",
       "corbin.m.guggenheim@gmail.com",
     ].includes(addedBy)
   ) ||
   (
-    activeFilter === "Added by Britni" &&
+    activeViewFilter === "Added by Britni" &&
     addedBy === "britni.kiosse@gmail.com"
   );
+
+const matchesCategoryFilters =
+  activeCategoryFilters.length === 0 ||
+  activeCategoryFilters.some((category) =>
+    place.categories?.includes(category)
+  );
+
+const matchesFilter =
+  matchesViewFilter && matchesCategoryFilters;
   
 
   return matchesSearch && matchesFilter;
@@ -257,6 +266,13 @@ const matchesFilter =
     currentCategories.includes(category)
       ? currentCategories.filter((item) => item !== category)
       : [...currentCategories, category]
+  );
+}
+function toggleCategoryFilter(category) {
+  setActiveCategoryFilters((currentFilters) =>
+    currentFilters.includes(category)
+      ? currentFilters.filter((item) => item !== category)
+      : [...currentFilters, category]
   );
 }
 
