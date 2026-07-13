@@ -93,6 +93,13 @@ function normalizePlace(place) {
     lngLat: place.lngLat || place.lnglat,
     ratings: place.ratings || {},
     status: place.status || "Wishlist",
+
+    categories:
+      place.categories?.length
+        ? place.categories
+        : place.type
+        ? [place.type]
+        : [],
   };
 }
 
@@ -150,7 +157,7 @@ function App() {
   const markersRef = useRef([]);
   const hasSetDefaultFilter = useRef(false);
   const [showAddSpot, setShowAddSpot] = useState(false);
-  const [newCategory, setNewCategory] = useState("Dinner");
+  const [newCategories, setNewCategories] = useState(["Dinner"]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("My Spots");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -244,6 +251,14 @@ const matchesFilter =
       setMapStarted(true);
   }
 
+  function toggleNewCategory(category) {
+  setNewCategories((currentCategories) =>
+    currentCategories.includes(category)
+      ? currentCategories.filter((item) => item !== category)
+      : [...currentCategories, category]
+  );
+}
+
   async function addSpot() {
   if (!newName || !newNeighborhood) return;
 
@@ -292,7 +307,8 @@ if (imageFile) {
     created_by: session?.user?.email,
     owner_email: session?.user?.email,
     
-    type: newCategory,
+    type: newCategories[0] || "",
+    categories: newCategories,
 
     lnglat: coordinates,
 
@@ -376,7 +392,7 @@ if (userSpotCount === 10) {
 savePlace();
   setNewName("");
   setNewNeighborhood("");
-  setNewCategory("Dinner");
+  setNewCategories(["Dinner"]);
   setNewNotes("");
   setNewImage("");
   setShowAddSpot(false);
@@ -1245,24 +1261,52 @@ return (
   }}
 />
 
-<select
-  value={newCategory}
-  onChange={(e) => setNewCategory(e.target.value)}
-  style={{
-    width: "100%",
-    padding: 12,
-    marginBottom: 12,
-    borderRadius: 10,
-    border: "1px solid #ccc",
-    background: "white",
-  }}
->
-  {experienceCategories.map((category) => (
-    <option key={category} value={category}>
-      {category}
-    </option>
-  ))}
-</select>
+<div style={{ marginBottom: 12 }}>
+  <div
+    style={{
+      marginBottom: 8,
+      fontSize: 14,
+      fontWeight: 600,
+      color: "#1E2E45",
+    }}
+  >
+    Categories
+  </div>
+
+  <div
+    style={{
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 8,
+    }}
+  >
+    {experienceCategories.map((category) => {
+      const isSelected = newCategories.includes(category);
+
+      return (
+        <button
+          key={category}
+          type="button"
+          onClick={() => toggleNewCategory(category)}
+          style={{
+            border: isSelected
+              ? "1px solid #1E2E45"
+              : "1px solid rgba(0,0,0,0.14)",
+            borderRadius: 999,
+            padding: "8px 12px",
+            background: isSelected ? "#1E2E45" : "white",
+            color: isSelected ? "white" : "#1E2E45",
+            cursor: "pointer",
+            fontSize: 13,
+            fontWeight: 500,
+          }}
+        >
+          {category}
+        </button>
+      );
+    })}
+  </div>
+</div>
 
     <button
       onClick={addSpot}
