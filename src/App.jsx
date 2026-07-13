@@ -183,6 +183,7 @@ function App() {
 
 const matchesFilter =
   activeFilter === "All" ||
+  place.categories?.includes(activeFilter) ||
   place.type === activeFilter ||
   (activeFilter === "Scored 9+" && place.score && place.score >= 9) ||
   (activeFilter === "Wishlist" && !place.score) ||
