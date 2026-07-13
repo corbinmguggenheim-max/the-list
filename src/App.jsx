@@ -129,6 +129,11 @@ const experienceCategories = [
   "Late Night",
 ];
 
+const adminUsers = [
+  "raventechct@gmail.com",
+  "corbin.m.guggenheim@gmail.com",
+];
+
 function App() {
   const token = import.meta.env.VITE_MAPBOX_TOKEN;
   console.log("Token exists:", !!token);
@@ -143,6 +148,7 @@ function App() {
   const [selectedMapboxPlace, setSelectedMapboxPlace] = useState(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
+  const hasSetDefaultFilter = useRef(false);
   const [showAddSpot, setShowAddSpot] = useState(false);
   const [newCategory, setNewCategory] = useState("Dinner");
   const [searchQuery, setSearchQuery] = useState("");
@@ -151,6 +157,9 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [session, setSession] = useState(null);
+  const isAdmin = adminUsers.includes(
+  session?.user?.email?.toLowerCase()
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mapReady, setMapReady] = useState(false);
@@ -542,6 +551,19 @@ useEffect(() => {
 
   return () => subscription.unsubscribe();
 }, []);
+
+useEffect(() => {
+  if (!session?.user?.email) {
+    hasSetDefaultFilter.current = false;
+    return;
+  }
+
+  if (hasSetDefaultFilter.current) return;
+
+  setActiveFilter(isAdmin ? "All" : "My Spots");
+
+  hasSetDefaultFilter.current = true;
+}, [session?.user?.email, isAdmin]);
 
 useEffect(() => {
   function handleResize() {
