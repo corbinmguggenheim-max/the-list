@@ -161,6 +161,8 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeViewFilter, setActiveViewFilter] = useState("My Spots");
   const [activeCategoryFilters, setActiveCategoryFilters] = useState([]);
+  const activeFilter = activeViewFilter;
+  const setActiveFilter = setActiveViewFilter;
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -203,8 +205,8 @@ const matchesViewFilter =
 
 const matchesCategoryFilters =
   activeCategoryFilters.length === 0 ||
-  activeCategoryFilters.some((category) =>
-    place.categories?.includes(category)
+  activeCategoryFilters.every((category) =>
+  place.categories?.includes(category)
   );
 
 const matchesFilter =
@@ -902,42 +904,54 @@ return (
         }}
       >
       {[
-        { label: `All (${places.length})`, value: "All" },
-        ...experienceCategories.map((category) => ({
-         label: category,
-         value: category,
-        })),
-        { label: "Added by Corbin", value: "Added by Corbin" },
-        { label: "Added by Britni", value: "Added by Britni" },
-        { label: "My Spots", value: "My Spots" },
-      ].map((filter) => (
-            <button
-              key={filter.value}
-              onClick={() => {
-                console.log("Clicked filter:", filter);
-                setActiveFilter(filter.value);
-                setFiltersOpen(false);
-              }}
-              style={{
-                width: "100%",
-                border: "none",
-                background:
-                  activeFilter === filter.value
-                    ? "rgba(30,46,69,0.08)"
-                    : "transparent",
-                padding: "10px 12px",
-                borderRadius: 12,
-                textAlign: "left",
-                cursor: "pointer",
-                color: "#1E2E45",
-                fontSize: 14,
-                fontWeight: activeFilter === filter.value ? 600 : 500,
-              }}
-            >
-              {filter.label}
-            </button>
-          )
-        )}
+  { label: `All (${places.length})`, value: "All" },
+  ...experienceCategories.map((category) => ({
+    label: category,
+    value: category,
+  })),
+  { label: "Added by Corbin", value: "Added by Corbin" },
+  { label: "Added by Britni", value: "Added by Britni" },
+  { label: "My Spots", value: "My Spots" },
+].map((filter) => {
+  const isCategory = experienceCategories.includes(filter.value);
+
+  const isSelected = isCategory
+    ? activeCategoryFilters.includes(filter.value)
+    : activeViewFilter === filter.value;
+
+  return (
+    <button
+      key={filter.value}
+      onClick={() => {
+        if (isCategory) {
+          toggleCategoryFilter(filter.value);
+        } else {
+          setActiveViewFilter(filter.value);
+        }
+      }}
+      style={{
+        width: "100%",
+        border: "none",
+        background: isSelected
+          ? "rgba(30,46,69,0.10)"
+          : "transparent",
+        padding: "10px 12px",
+        borderRadius: 12,
+        textAlign: "left",
+        cursor: "pointer",
+        color: "#1E2E45",
+        fontSize: 14,
+        fontWeight: isSelected ? 600 : 500,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
+      <span>{filter.label}</span>
+      {isSelected && <span>✓</span>}
+    </button>
+  );
+})}
       </div>
       </>
     )}
