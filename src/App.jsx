@@ -1533,6 +1533,78 @@ return (
   />
 </div>
 
+<div style={{ marginBottom: 16 }}>
+  <div
+    style={{
+      marginBottom: 8,
+      fontSize: 13,
+      fontWeight: 600,
+      color: "#1E2E45",
+    }}
+  >
+    Categories
+  </div>
+
+  <div
+    style={{
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 8,
+    }}
+  >
+    {experienceCategories.map((category) => {
+      const selectedCategories =
+        selectedPlace.categories?.length
+          ? selectedPlace.categories
+          : selectedPlace.type
+          ? [selectedPlace.type]
+          : [];
+
+      const isSelected = selectedCategories.includes(category);
+
+      return (
+        <button
+          key={category}
+          type="button"
+          onPointerDown={(e) => {
+            e.preventDefault();
+
+            const updatedCategories = isSelected
+              ? selectedCategories.filter(
+                  (item) => item !== category
+                )
+              : [...selectedCategories, category];
+
+            const updatedPlace = {
+              ...selectedPlace,
+              categories: updatedCategories,
+              type: updatedCategories[0] || "",
+            };
+
+            updatePlace(updatedPlace);
+          }}
+          style={{
+            border: isSelected
+              ? "1px solid #1E2E45"
+              : "1px solid rgba(0,0,0,0.14)",
+            borderRadius: 999,
+            padding: "8px 12px",
+            background: isSelected ? "#1E2E45" : "white",
+            color: isSelected ? "white" : "#1E2E45",
+            cursor: "pointer",
+            fontSize: 13,
+            fontWeight: 500,
+            touchAction: "manipulation",
+            userSelect: "none",
+          }}
+        >
+          {isSelected ? `✓ ${category}` : category}
+        </button>
+      );
+    })}
+  </div>
+</div>
+
 <div style={{ marginBottom: 18 }}>
   <button
     onClick={() => {
