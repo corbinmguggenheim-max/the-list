@@ -1287,7 +1287,10 @@ return (
         <button
           key={category}
           type="button"
-          onClick={() => toggleNewCategory(category)}
+          onPointerDown={(e) => {
+          e.preventDefault();
+          toggleNewCategory(category);
+          }}
           style={{
             border: isSelected
               ? "1px solid #1E2E45"
@@ -1299,6 +1302,8 @@ return (
             cursor: "pointer",
             fontSize: 13,
             fontWeight: 500,
+            touchAction: "manipulation",
+            userSelect: "none",
           }}
         >
           {category}
