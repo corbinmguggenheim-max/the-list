@@ -1510,27 +1510,6 @@ return (
       color: "#6B7280",
     }}
   />
-
-  <input
-    value={selectedPlace.type}
-    onChange={(e) => {
-      const updatedPlace = {
-        ...selectedPlace,
-        type: e.target.value,
-      };
-
-      updatePlace(updatedPlace);
-    }}
-    style={{
-      flex: 1,
-      border: "none",
-      background: "rgba(0,0,0,0.04)",
-      borderRadius: 999,
-      padding: "8px 12px",
-      outline: "none",
-      color: "#6B7280",
-    }}
-  />
 </div>
 
 <div style={{ marginBottom: 16 }}>
