@@ -161,12 +161,13 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeViewFilter, setActiveViewFilter] = useState("My Spots");
   const [activeCategoryFilters, setActiveCategoryFilters] = useState([]);
-  const activeFilter = activeViewFilter;
-  const setActiveFilter = setActiveViewFilter;
+  const [activeSpecialFilters, setActiveSpecialFilters] = useState([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
   const isAdmin = adminUsers.includes(
   session?.user?.email?.toLowerCase()
   );
@@ -209,8 +210,24 @@ const matchesCategoryFilters =
   place.categories?.includes(category)
   );
 
+const matchesSpecialFilters =
+  activeSpecialFilters.length === 0 ||
+  activeSpecialFilters.every((filter) => {
+    if (filter === "Wishlist") {
+  return place.status === "Wishlist";
+  }
+
+    if (filter === "Scored 9+") {
+      return place.score && place.score >= 9;
+    }
+
+    return true;
+  });
+
 const matchesFilter =
-  matchesViewFilter && matchesCategoryFilters;
+  matchesViewFilter &&
+  matchesCategoryFilters &&
+  matchesSpecialFilters;
   
 
   return matchesSearch && matchesFilter;
@@ -275,6 +292,14 @@ function toggleCategoryFilter(category) {
     currentFilters.includes(category)
       ? currentFilters.filter((item) => item !== category)
       : [...currentFilters, category]
+  );
+}
+
+function toggleSpecialFilter(filter) {
+  setActiveSpecialFilters((currentFilters) =>
+    currentFilters.includes(filter)
+      ? currentFilters.filter((item) => item !== filter)
+      : [...currentFilters, filter]
   );
 }
 
@@ -588,17 +613,35 @@ useEffect(() => {
 }, []);
 
 useEffect(() => {
+  if (!session?.user?.id) {
+    setProfile(null);
+    return;
+  }
+
+  loadOrCreateProfile(session);
+}, [session?.user?.id]);
+
+useEffect(() => {
   if (!session?.user?.email) {
     hasSetDefaultFilter.current = false;
     return;
   }
 
+  if (profileLoading) return;
   if (hasSetDefaultFilter.current) return;
 
-  setActiveFilter(isAdmin ? "All" : "My Spots");
+  setActiveViewFilter(
+    profile?.default_view_filter ??
+      (isAdmin ? "All" : "My Spots")
+  );
 
   hasSetDefaultFilter.current = true;
-}, [session?.user?.email, isAdmin]);
+}, [
+  session?.user?.email,
+  profile?.default_view_filter,
+  profileLoading,
+  isAdmin,
+]);
 
 useEffect(() => {
   function handleResize() {
@@ -646,6 +689,63 @@ async function signUp() {
   } else {
     alert("Account created!");
   }
+}
+
+async function loadOrCreateProfile(currentSession) {
+  const user = currentSession?.user;
+
+  if (!user?.id) {
+    setProfile(null);
+    return;
+  }
+
+  setProfileLoading(true);
+
+  const { data: existingProfile, error: selectError } =
+    await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+
+  if (selectError) {
+    console.error("Profile lookup error:", selectError);
+    setProfileLoading(false);
+    return;
+  }
+
+  if (existingProfile) {
+    setProfile(existingProfile);
+    setProfileLoading(false);
+    return;
+  }
+
+  const initialDisplayName =
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    formatUserName(user.email);
+
+  const { data: newProfile, error: insertError } =
+    await supabase
+      .from("profiles")
+      .insert([
+        {
+          id: user.id,
+          display_name: initialDisplayName,
+          default_view_filter: isAdmin ? "All" : "My Spots",
+        },
+      ])
+      .select()
+      .single();
+
+  if (insertError) {
+    console.error("Profile creation error:", insertError);
+    setProfileLoading(false);
+    return;
+  }
+
+  setProfile(newProfile);
+  setProfileLoading(false);
 }
 
 async function signIn() {
@@ -893,7 +993,7 @@ return (
           position: "relative",
           zIndex: 31,
           marginTop: 10,
-          width: 190,
+          width: 220,
           background: "rgba(255,255,255,0.96)",
           backdropFilter: "blur(14px)",
           borderRadius: 18,
@@ -903,32 +1003,152 @@ return (
           border: "1px solid rgba(15,23,42,0.06)",
         }}
       >
-      {[
+    <div
+  style={{
+    padding: "6px 10px 4px",
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#6B7280",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  }}
+>
+  Viewing
+</div>
+
+{[
   { label: `All (${places.length})`, value: "All" },
-  ...experienceCategories.map((category) => ({
-    label: category,
-    value: category,
-  })),
+  { label: "My Spots", value: "My Spots" },
   { label: "Added by Corbin", value: "Added by Corbin" },
   { label: "Added by Britni", value: "Added by Britni" },
-  { label: "My Spots", value: "My Spots" },
 ].map((filter) => {
-  const isCategory = experienceCategories.includes(filter.value);
-
-  const isSelected = isCategory
-    ? activeCategoryFilters.includes(filter.value)
-    : activeViewFilter === filter.value;
+  const isSelected = activeViewFilter === filter.value;
 
   return (
     <button
       key={filter.value}
-      onClick={() => {
-        if (isCategory) {
-          toggleCategoryFilter(filter.value);
-        } else {
-          setActiveViewFilter(filter.value);
-        }
+      onClick={() => setActiveViewFilter(filter.value)}
+      style={{
+        width: "100%",
+        border: "none",
+        background: isSelected
+          ? "rgba(30,46,69,0.10)"
+          : "transparent",
+        padding: "10px 12px",
+        borderRadius: 12,
+        textAlign: "left",
+        cursor: "pointer",
+        color: "#1E2E45",
+        fontSize: 14,
+        fontWeight: isSelected ? 600 : 500,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
       }}
+    >
+      <span>{filter.label}</span>
+      {isSelected && <span>✓</span>}
+    </button>
+  );
+})}
+
+<div
+  style={{
+    height: 1,
+    background: "rgba(0,0,0,0.08)",
+    margin: "8px 4px",
+  }}
+/>
+
+<div
+  style={{
+    padding: "6px 10px 4px",
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#6B7280",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    display: "flex",
+    justifyContent: "space-between",
+  }}
+>
+  <span>Categories</span>
+
+  {activeCategoryFilters.length > 0 && (
+    <span>{activeCategoryFilters.length}</span>
+  )}
+</div>
+
+{experienceCategories.map((category) => {
+  const isSelected =
+    activeCategoryFilters.includes(category);
+
+  return (
+    <button
+      key={category}
+      onClick={() => toggleCategoryFilter(category)}
+      style={{
+        width: "100%",
+        border: "none",
+        background: isSelected
+          ? "rgba(30,46,69,0.10)"
+          : "transparent",
+        padding: "10px 12px",
+        borderRadius: 12,
+        textAlign: "left",
+        cursor: "pointer",
+        color: "#1E2E45",
+        fontSize: 14,
+        fontWeight: isSelected ? 600 : 500,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
+      <span>{category}</span>
+      {isSelected && <span>✓</span>}
+    </button>
+  );
+})}
+
+<div
+  style={{
+    height: 1,
+    background: "rgba(0,0,0,0.08)",
+    margin: "8px 4px",
+  }}
+/>
+
+<div
+  style={{
+    padding: "6px 10px 4px",
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#6B7280",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    display: "flex",
+    justifyContent: "space-between",
+  }}
+>
+  <span>Special</span>
+
+  {activeSpecialFilters.length > 0 && (
+    <span>{activeSpecialFilters.length}</span>
+  )}
+</div>
+
+{[
+  { label: "Wishlist", value: "Wishlist" },
+  { label: "Scored 9+", value: "Scored 9+" },
+].map((filter) => {
+  const isSelected =
+    activeSpecialFilters.includes(filter.value);
+
+  return (
+    <button
+      key={filter.value}
+      onClick={() => toggleSpecialFilter(filter.value)}
       style={{
         width: "100%",
         border: "none",
@@ -1066,7 +1286,7 @@ return (
 
   setSelectedPlace(null);
   setSearchQuery("");
-  setActiveFilter("All");
+  setActiveViewFilter("All");
 }}
   style={{
     position: "absolute",
