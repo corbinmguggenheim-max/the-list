@@ -165,9 +165,11 @@ function App() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [profilesById, setProfilesById] = useState({});
   const isAdmin = adminUsers.includes(
   session?.user?.email?.toLowerCase()
   );
@@ -188,9 +190,8 @@ function App() {
 const matchesViewFilter =
   activeViewFilter === "All" ||
   (
-    activeViewFilter === "My Spots" &&
-    place.owner_email?.toLowerCase() ===
-      session?.user?.email?.toLowerCase()
+  activeViewFilter === "My Spots" &&
+  place.owner_id === session?.user?.id
   ) ||
   (
     activeViewFilter === "Added by Corbin" &&
@@ -348,6 +349,9 @@ if (imageFile) {
       selectedMapboxPlace?.properties?.place_formatted || newNeighborhood,
     
     status: "Wishlist",
+    created_by_id: session?.user?.id,
+    owner_id: session?.user?.id,
+
     created_by: session?.user?.email,
     owner_email: session?.user?.email,
     
@@ -394,11 +398,11 @@ if (imageFile) {
 setPlaces([...places, savedPlace]);
 setSelectedPlace(savedPlace);
 
-const userEmail = session?.user?.email?.toLowerCase();
+const userId = session?.user?.id;
 
 const userSpotCount =
   places.filter(
-    (place) => place.created_by?.toLowerCase() === userEmail
+    (place) => place.created_by_id === userId
   ).length + 1;
 
 if (userSpotCount === 1) {
@@ -622,6 +626,15 @@ useEffect(() => {
 }, [session?.user?.id]);
 
 useEffect(() => {
+  if (!session?.user?.id) {
+    setProfilesById({});
+    return;
+  }
+
+  loadProfileDirectory();
+}, [session?.user?.id, profile?.id]);
+
+useEffect(() => {
   if (!session?.user?.email) {
     hasSetDefaultFilter.current = false;
     return;
@@ -746,6 +759,26 @@ async function loadOrCreateProfile(currentSession) {
 
   setProfile(newProfile);
   setProfileLoading(false);
+}
+
+async function loadProfileDirectory() {
+  const { data, error } = await supabase
+    .from("profile_directory")
+    .select("id, display_name, avatar_url");
+
+  if (error) {
+    console.error("Profile directory error:", error);
+    return;
+  }
+
+  const profileMap = Object.fromEntries(
+    (data || []).map((directoryProfile) => [
+      directoryProfile.id,
+      directoryProfile,
+    ])
+  );
+
+  setProfilesById(profileMap);
 }
 
 async function signIn() {
@@ -920,9 +953,18 @@ return (
 
   <button
     onClick={() => {
-      setMenuOpen((current) => !current);
-      setFiltersOpen(false);
-    }}
+    setMenuOpen((current) => {
+    const nextOpen = !current;
+
+    if (!nextOpen) {
+      setSettingsOpen(false);
+    }
+
+    return nextOpen;
+  });
+
+  setFiltersOpen(false);
+}}
     style={{
       justifySelf: "end",
       background: "rgba(255,255,255,0.92)",
@@ -1310,9 +1352,12 @@ return (
 </button>
 
 {menuOpen && (
-   <>
+  <>
     <div
-      onClick={() => setMenuOpen(false)}
+      onClick={() => {
+        setMenuOpen(false);
+        setSettingsOpen(false);
+      }}
       style={{
         position: "absolute",
         inset: 0,
@@ -1321,82 +1366,182 @@ return (
       }}
     />
 
-  <div
-    style={{
-      position: "absolute",
-      zIndex: 200,
-      top: isMobile ? 64 : 76,
-      right: isMobile ? 16 : 24,
-      width: 190,
-      background: "rgba(255,255,255,0.96)",
-      backdropFilter: "blur(14px)",
-      borderRadius: 20,
-      padding: 10,
-      boxShadow:
-        "0 20px 60px rgba(15,23,42,0.16), 0 8px 24px rgba(15,23,42,0.08)",
-      border: "1px solid rgba(15,23,42,0.06)",
-    }}
-  >
-    <button
-  onClick={() => {
-    const data = JSON.stringify(places, null, 2);
-    const blob = new Blob([data], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
+    <div
+      style={{
+        position: "absolute",
+        zIndex: 200,
+        top: isMobile ? 64 : 76,
+        right: isMobile ? 16 : 24,
+        width: 220,
+        background: "rgba(255,255,255,0.96)",
+        backdropFilter: "blur(14px)",
+        borderRadius: 20,
+        padding: 10,
+        boxShadow:
+          "0 20px 60px rgba(15,23,42,0.16), 0 8px 24px rgba(15,23,42,0.08)",
+        border: "1px solid rgba(15,23,42,0.06)",
+      }}
+    >
+      <button
+        onClick={() => setSettingsOpen((current) => !current)}
+        style={{
+          ...menuButtonStyle,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          fontWeight: 600,
+        }}
+      >
+        <span>Settings</span>
 
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "the-list-backup.json";
-    link.click();
+        <span
+          style={{
+            fontSize: 12,
+            transform: settingsOpen
+              ? "rotate(180deg)"
+              : "rotate(0deg)",
+            transition: "transform 0.18s ease",
+          }}
+        >
+          ▼
+        </span>
+      </button>
 
-    URL.revokeObjectURL(url);
-    setMenuOpen(false);
-  }}
-  style={menuButtonStyle}
->
-  Export
-</button>
+      <div
+        style={{
+          maxHeight: settingsOpen ? 300 : 0,
+          opacity: settingsOpen ? 1 : 0,
+          overflow: "hidden",
+          transition:
+            "max-height 0.22s ease, opacity 0.16s ease",
+        }}
+      >
+        <div
+          style={{
+            marginLeft: 12,
+            paddingLeft: 10,
+            borderLeft: "1px solid rgba(30,46,69,0.12)",
+          }}
+        >
+          <button
+            onClick={() => {
+              alert("Profile settings coming soon.");
+            }}
+            style={{
+              ...menuButtonStyle,
+              fontSize: 13,
+              padding: "9px 10px",
+            }}
+          >
+            Profile
+          </button>
 
-<button
-  onClick={() => {
-    document.getElementById("import-backup-input").click();
-    setMenuOpen(false);
-  }}
-  style={menuButtonStyle}
->
-  Import
-</button>
+          <button
+            onClick={() => {
+              alert("Home Base settings coming soon.");
+            }}
+            style={{
+              ...menuButtonStyle,
+              fontSize: 13,
+              padding: "9px 10px",
+            }}
+          >
+            Home Base
+          </button>
 
-<button
-  onClick={() => {
-    alert("Feature request form coming soon.");
-    setMenuOpen(false);
-  }}
-  style={menuButtonStyle}
->
-  Request Feature
-</button>
+          <button
+            onClick={() => {
+              alert("Default View settings coming soon.");
+            }}
+            style={{
+              ...menuButtonStyle,
+              fontSize: 13,
+              padding: "9px 10px",
+            }}
+          >
+            Default View
+          </button>
 
-<div
-  style={{
-    height: 1,
-    background: "rgba(0,0,0,0.12)",
-    margin: "10px 0",
-  }}
-/>
+          <button
+            onClick={() => {
+              const data = JSON.stringify(places, null, 2);
+              const blob = new Blob([data], {
+                type: "application/json",
+              });
 
-<button
-  onClick={() => {
-    signOut();
-    setMenuOpen(false);
-  }}
-  style={{
-    ...menuButtonStyle,
-    color: "#D9534F",
-  }}
->
-  Sign Out
-</button>
-  </div>
+              const url = URL.createObjectURL(blob);
+
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = "the-list-backup.json";
+              link.click();
+
+              URL.revokeObjectURL(url);
+              setMenuOpen(false);
+              setSettingsOpen(false);
+            }}
+            style={{
+              ...menuButtonStyle,
+              fontSize: 13,
+              padding: "9px 10px",
+            }}
+          >
+            Export My List
+          </button>
+
+          <button
+            onClick={() => {
+              document
+                .getElementById("import-backup-input")
+                .click();
+
+              setMenuOpen(false);
+              setSettingsOpen(false);
+            }}
+            style={{
+              ...menuButtonStyle,
+              fontSize: 13,
+              padding: "9px 10px",
+            }}
+          >
+            Import My List
+          </button>
+        </div>
+      </div>
+
+      <button
+        onClick={() => {
+          alert("Feature suggestion form coming soon.");
+          setMenuOpen(false);
+          setSettingsOpen(false);
+        }}
+        style={menuButtonStyle}
+      >
+        Suggest a Feature
+      </button>
+
+      <div
+        style={{
+          height: 1,
+          background: "rgba(0,0,0,0.12)",
+          margin: "10px 0",
+        }}
+      />
+
+      <button
+        onClick={() => {
+          signOut();
+          setMenuOpen(false);
+          setSettingsOpen(false);
+        }}
+        style={{
+          ...menuButtonStyle,
+          color: "#D9534F",
+        }}
+      >
+        Sign Out
+      </button>
+    </div>
   </>
 )}
 
@@ -1716,7 +1861,9 @@ return (
     letterSpacing: 0.3,
   }}
 >
-  Added by {formatUserName(selectedPlace.created_by)}
+  Added by{" "}
+{profilesById[selectedPlace.created_by_id]?.display_name ||
+  formatUserName(selectedPlace.created_by)}
 </p>
 
 <button
