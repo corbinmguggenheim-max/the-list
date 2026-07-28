@@ -170,9 +170,23 @@ function App() {
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profilesById, setProfilesById] = useState({});
+  const [friendsOpen, setFriendsOpen] = useState(false);
+  const [addFriendOpen, setAddFriendOpen] = useState(false);
+  const [friendEmail, setFriendEmail] = useState("");
+  const [foundFriend, setFoundFriend] = useState(null);
+  const [incomingFriendRequests, setIncomingFriendRequests] =
+  useState([]);
+  const [friends, setFriends] = useState([]);
+  const [friendsLoading, setFriendsLoading] = useState(false);
+  const [friendSearching, setFriendSearching] = useState(false);
+  const [friendRequestSending, setFriendRequestSending] =
+  useState(false);
+
+  const [friendRequestMessage, setFriendRequestMessage] =
+    useState("");
   const isAdmin = adminUsers.includes(
-  session?.user?.email?.toLowerCase()
-  );
+        session?.user?.email?.toLowerCase()
+      );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mapReady, setMapReady] = useState(false);
@@ -635,6 +649,14 @@ useEffect(() => {
 }, [session?.user?.id, profile?.id]);
 
 useEffect(() => {
+  if (!friendsOpen || !session?.user?.id) {
+    return;
+  }
+
+  loadFriendships();
+}, [friendsOpen, session?.user?.id]);
+
+useEffect(() => {
   if (!session?.user?.email) {
     hasSetDefaultFilter.current = false;
     return;
@@ -779,6 +801,150 @@ async function loadProfileDirectory() {
   );
 
   setProfilesById(profileMap);
+}
+
+async function loadFriendships() {
+  const currentUserId = session?.user?.id;
+
+  if (!currentUserId) {
+    setIncomingFriendRequests([]);
+    setFriends([]);
+    return;
+  }
+
+  setFriendsLoading(true);
+
+  const { data, error } = await supabase
+    .from("friendships")
+    .select("*")
+    .or(
+      `requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`
+    );
+
+  if (error) {
+    console.error("Friendships loading error:", error);
+    setFriendsLoading(false);
+    return;
+  }
+
+  const friendshipRows = data || [];
+
+  const incomingRequests = friendshipRows.filter(
+    (friendship) =>
+      friendship.addressee_id === currentUserId &&
+      friendship.status === "pending"
+  );
+
+  const acceptedFriendships = friendshipRows.filter(
+    (friendship) => friendship.status === "accepted"
+  );
+
+  setIncomingFriendRequests(incomingRequests);
+  setFriends(acceptedFriendships);
+  setFriendsLoading(false);
+}
+
+async function searchForFriend() {
+  const email = friendEmail.trim().toLowerCase();
+
+  if (!email) {
+    return;
+  }
+
+  setFriendRequestMessage("");
+  setFriendSearching(true);
+
+  const { data, error } = await supabase.rpc(
+    "find_friend_by_email",
+    {
+      searched_email: email,
+    }
+  );
+
+  setFriendSearching(false);
+
+  if (error) {
+    console.error(error);
+    setFoundFriend(null);
+    return;
+  }
+
+  setFoundFriend(data?.[0] ?? null);
+}
+
+async function acceptFriendRequest(friendshipId) {
+  const { error } = await supabase
+    .from("friendships")
+    .update({
+      status: "accepted",
+      responded_at: new Date().toISOString(),
+    })
+    .eq("id", friendshipId);
+
+  if (error) {
+    console.error("Accept friend request error:", error);
+    return;
+  }
+
+  await loadFriendships();
+}
+
+async function declineFriendRequest(friendshipId) {
+  const { error } = await supabase
+    .from("friendships")
+    .update({
+      status: "declined",
+      responded_at: new Date().toISOString(),
+    })
+    .eq("id", friendshipId);
+
+  if (error) {
+    console.error("Decline friend request error:", error);
+    return;
+  }
+
+  await loadFriendships();
+}
+
+async function sendFriendRequest() {
+  if (!session?.user?.id || !foundFriend?.user_id) {
+    return;
+  }
+
+  setFriendRequestSending(true);
+  setFriendRequestMessage("");
+
+  const { error } = await supabase
+    .from("friendships")
+    .insert([
+      {
+        requester_id: session.user.id,
+        addressee_id: foundFriend.user_id,
+        status: "pending",
+      },
+    ]);
+
+  setFriendRequestSending(false);
+
+  if (error) {
+    console.error("Friend request error:", error);
+
+    if (error.code === "23505") {
+      setFriendRequestMessage(
+        "A friendship or pending request already exists."
+      );
+    } else {
+      setFriendRequestMessage(
+        "The friend request could not be sent."
+      );
+    }
+
+    return;
+  }
+
+  setFriendRequestMessage("Friend request sent.");
+  setFriendEmail("");
+  setFoundFriend(null);
 }
 
 async function signIn() {
@@ -1511,6 +1677,17 @@ return (
 
       <button
         onClick={() => {
+          setFriendsOpen(true);
+          setMenuOpen(false);
+          setSettingsOpen(false);
+        }}
+        style={menuButtonStyle}
+      >
+        Friends
+      </button>
+
+      <button
+        onClick={() => {
           alert("Feature suggestion form coming soon.");
           setMenuOpen(false);
           setSettingsOpen(false);
@@ -1576,6 +1753,549 @@ return (
     reader.readAsText(file);
   }}
 />
+
+{friendsOpen && (
+  <>
+    <div
+      onClick={() => {
+        setFriendsOpen(false);
+        setAddFriendOpen(false);
+        setFriendEmail("");
+        setFoundFriend(null);
+        setFriendRequestMessage("");
+      }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 90,
+        background: "rgba(15,23,42,0.18)",
+      }}
+    />
+
+    <div
+      style={{
+        position: "fixed",
+        zIndex: 100,
+        top: isMobile ? 24 : 40,
+        right: isMobile ? 16 : 24,
+        bottom: isMobile ? 24 : 40,
+        width: isMobile ? "calc(100% - 32px)" : 420,
+        maxWidth: "calc(100% - 32px)",
+        background: "rgba(255,255,255,0.98)",
+        borderRadius: 24,
+        border: "1px solid rgba(15,23,42,0.08)",
+        boxShadow:
+          "0 24px 80px rgba(15,23,42,0.20), 0 10px 30px rgba(15,23,42,0.10)",
+        overflowY: "auto",
+        padding: 20,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 20,
+        }}
+      >
+        <h2
+          style={{
+            margin: 0,
+            color: "#1E2E45",
+            fontSize: 24,
+            fontWeight: 700,
+          }}
+        >
+          Friends
+        </h2>
+
+        <button
+          onClick={() => {
+            setFriendsOpen(false);
+            setAddFriendOpen(false);
+            setFriendEmail("");
+            setFoundFriend(null);
+            setFriendRequestMessage("");
+          }}
+          style={{
+            border: "none",
+            background: "transparent",
+            color: "#6B7280",
+            cursor: "pointer",
+            fontSize: 22,
+            padding: 4,
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      <button
+        onClick={() =>
+          setAddFriendOpen((current) => !current)
+        }
+        style={{
+          ...menuButtonStyle,
+          border: "1px solid rgba(15,23,42,0.10)",
+          background: addFriendOpen
+            ? "rgba(30,46,69,0.08)"
+            : "transparent",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          fontWeight: 600,
+        }}
+      >
+        <span>+ Add Friend</span>
+        <span
+          style={{
+            fontSize: 12,
+            transform: addFriendOpen
+              ? "rotate(180deg)"
+              : "rotate(0deg)",
+            transition: "transform 0.18s ease",
+          }}
+        >
+          ▼
+        </span>
+      </button>
+
+      <div
+        style={{
+          maxHeight: addFriendOpen ? 500 : 0,
+          opacity: addFriendOpen ? 1 : 0,
+          overflow: "hidden",
+          transition:
+            "max-height 0.22s ease, opacity 0.16s ease",
+        }}
+      >
+        <div
+          style={{
+            padding: "14px 2px 4px",
+          }}
+        >
+          <label
+            style={{
+              display: "block",
+              fontSize: 13,
+              color: "#6B7280",
+              marginBottom: 6,
+            }}
+          >
+            Email address
+          </label>
+
+          <input
+            type="email"
+            value={friendEmail}
+            onChange={(event) => {
+              setFriendEmail(event.target.value);
+              setFoundFriend(null);
+              setFriendRequestMessage("");
+            }}
+            placeholder="friend@example.com"
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              padding: "11px 12px",
+              borderRadius: 12,
+              border: "1px solid rgba(15,23,42,0.12)",
+              outline: "none",
+              fontSize: 14,
+              color: "#1E2E45",
+            }}
+          />
+
+          <button
+            onClick={searchForFriend}
+            disabled={friendSearching}
+            style={{
+              width: "100%",
+              marginTop: 10,
+              padding: "11px 12px",
+              borderRadius: 12,
+              border: "none",
+              background: "#1E2E45",
+              color: "white",
+              cursor: friendSearching
+                ? "default"
+                : "pointer",
+              opacity: friendSearching ? 0.65 : 1,
+              fontWeight: 600,
+            }}
+          >
+            {friendSearching ? "Searching..." : "Search"}
+          </button>
+        {foundFriend && (
+          <div
+            style={{
+              marginTop: 14,
+              padding: 12,
+              borderRadius: 14,
+              border: "1px solid rgba(15,23,42,0.10)",
+              background: "rgba(15,23,42,0.025)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              {foundFriend.avatar_url ? (
+                <img
+                  src={foundFriend.avatar_url}
+                  alt={foundFriend.display_name}
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: "50%",
+                    background: "rgba(30,46,69,0.10)",
+                    color: "#1E2E45",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 700,
+                    flexShrink: 0,
+                  }}
+                >
+                  {foundFriend.display_name?.charAt(0)?.toUpperCase()}
+                </div>
+              )}
+
+              <div
+                style={{
+                  color: "#1E2E45",
+                  fontSize: 15,
+                  fontWeight: 600,
+                }}
+              >
+                {foundFriend.display_name}
+              </div>
+            </div>
+
+            <button
+              onClick={sendFriendRequest}
+              disabled={friendRequestSending}
+              style={{
+                width: "100%",
+                marginTop: 12,
+                padding: "11px 12px",
+                borderRadius: 12,
+                border: "none",
+                background: "#1E2E45",
+                color: "white",
+                cursor: friendRequestSending
+                  ? "default"
+                  : "pointer",
+                opacity: friendRequestSending ? 0.65 : 1,
+                fontWeight: 600,
+              }}
+            >
+              {friendRequestSending
+                ? "Sending..."
+                : "Send Friend Request"}
+            </button>
+          </div>
+        )}
+
+        {friendRequestMessage && (
+          <p
+            style={{
+              margin: "12px 2px 0",
+              color:
+                friendRequestMessage === "Friend request sent."
+                  ? "#2E7D32"
+                  : "#B45309",
+              fontSize: 13,
+            }}
+          >
+            {friendRequestMessage}
+          </p>
+        )}
+        </div>
+      </div>
+
+      <div
+        style={{
+          height: 1,
+          background: "rgba(0,0,0,0.10)",
+          margin: "20px 0",
+        }}
+      />
+
+      <h3
+        style={{
+          margin: "0 0 10px",
+          color: "#1E2E45",
+          fontSize: 16,
+        }}
+      >
+        Requests
+      </h3>
+
+      {friendsLoading ? (
+  <p
+    style={{
+      margin: 0,
+      color: "#6B7280",
+      fontSize: 14,
+    }}
+  >
+    Loading...
+  </p>
+) : incomingFriendRequests.length === 0 ? (
+  <p
+    style={{
+      margin: 0,
+      color: "#6B7280",
+      fontSize: 14,
+    }}
+  >
+    No requests
+  </p>
+) : (
+  incomingFriendRequests.map((request) => {
+    const requester =
+      profilesById[request.requester_id];
+
+    return (
+      <div
+        key={request.id}
+        style={{
+          padding: 12,
+          borderRadius: 14,
+          border: "1px solid rgba(15,23,42,0.08)",
+          background: "rgba(15,23,42,0.025)",
+          marginBottom: 10,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          {requester?.avatar_url ? (
+            <img
+              src={requester.avatar_url}
+              alt={requester.display_name}
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: "50%",
+                objectFit: "cover",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: "50%",
+                background: "rgba(30,46,69,0.10)",
+                color: "#1E2E45",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              {requester?.display_name
+                ?.charAt(0)
+                ?.toUpperCase() || "?"}
+            </div>
+          )}
+
+          <div
+            style={{
+              color: "#1E2E45",
+              fontSize: 15,
+              fontWeight: 600,
+            }}
+          >
+            {requester?.display_name || "Friend request"}
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            marginTop: 12,
+          }}
+        >
+          <button
+            onClick={() =>
+              acceptFriendRequest(request.id)
+            }
+            style={{
+              flex: 1,
+              padding: "10px 12px",
+              borderRadius: 12,
+              border: "none",
+              background: "#1E2E45",
+              color: "white",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            Accept
+          </button>
+
+          <button
+            onClick={() =>
+              declineFriendRequest(request.id)
+            }
+            style={{
+              flex: 1,
+              padding: "10px 12px",
+              borderRadius: 12,
+              border:
+                "1px solid rgba(15,23,42,0.12)",
+              background: "transparent",
+              color: "#1E2E45",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            Decline
+          </button>
+        </div>
+      </div>
+    );
+  })
+)}
+
+      <div
+        style={{
+          height: 1,
+          background: "rgba(0,0,0,0.10)",
+          margin: "20px 0",
+        }}
+      />
+
+      <h3
+        style={{
+          margin: "0 0 10px",
+          color: "#1E2E45",
+          fontSize: 16,
+        }}
+      >
+        Your Friends
+      </h3>
+
+      {friendsLoading ? (
+  <p
+    style={{
+      margin: 0,
+      color: "#6B7280",
+      fontSize: 14,
+    }}
+  >
+    Loading...
+  </p>
+) : friends.length === 0 ? (
+  <p
+    style={{
+      margin: 0,
+      color: "#6B7280",
+      fontSize: 14,
+    }}
+  >
+    No friends yet
+  </p>
+) : (
+  friends.map((friendship) => {
+    const currentUserId = session?.user?.id;
+
+    const friendUserId =
+      friendship.requester_id === currentUserId
+        ? friendship.addressee_id
+        : friendship.requester_id;
+
+    const friendProfile = profilesById[friendUserId];
+
+    return (
+      <button
+        key={friendship.id}
+        onClick={() => {
+          console.log("Friend selected:", friendUserId);
+        }}
+        style={{
+          width: "100%",
+          border: "1px solid rgba(15,23,42,0.08)",
+          background: "rgba(15,23,42,0.025)",
+          borderRadius: 14,
+          padding: 12,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          textAlign: "left",
+          cursor: "pointer",
+          marginBottom: 10,
+        }}
+      >
+        {friendProfile?.avatar_url ? (
+          <img
+            src={friendProfile.avatar_url}
+            alt={friendProfile.display_name}
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: "50%",
+              objectFit: "cover",
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: "50%",
+              background: "rgba(30,46,69,0.10)",
+              color: "#1E2E45",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 700,
+              flexShrink: 0,
+            }}
+          >
+            {friendProfile?.display_name
+              ?.charAt(0)
+              ?.toUpperCase() || "?"}
+          </div>
+        )}
+
+        <div
+          style={{
+            color: "#1E2E45",
+            fontSize: 15,
+            fontWeight: 600,
+          }}
+        >
+          {friendProfile?.display_name || "Friend"}
+        </div>
+      </button>
+    );
+  })
+)}
+    </div>
+  </>
+)}
 
 {showAddSpot && (
   <div
