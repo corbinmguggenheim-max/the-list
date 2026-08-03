@@ -147,6 +147,11 @@ function App() {
   console.log("Token preview:", token?.substring(0, 10));
   const [mapStarted, setMapStarted] = useState(!!token);
   const [selectedPlace, setSelectedPlace] = useState(null);
+  const [sharedPerspectives, setSharedPerspectives] = useState([]);
+  const [activePerspectiveUserId, setActivePerspectiveUserId] =
+    useState(null);
+  const [sharedPerspectivesLoading, setSharedPerspectivesLoading] =
+    useState(false);
   const [places, setPlaces] = useState([]);
   const [newName, setNewName] = useState("");
   const [newNeighborhood, setNewNeighborhood] = useState("");
@@ -171,6 +176,9 @@ function App() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profilesById, setProfilesById] = useState({});
   const [friendsOpen, setFriendsOpen] = useState(false);
+  const [sharingOpen, setSharingOpen] = useState(false);
+  const [selectedShareFriendIds, setSelectedShareFriendIds] =
+  useState([]);
   const [addFriendOpen, setAddFriendOpen] = useState(false);
   const [friendEmail, setFriendEmail] = useState("");
   const [foundFriend, setFoundFriend] = useState(null);
@@ -193,6 +201,8 @@ function App() {
   const [imageFile, setImageFile] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [milestoneMessage, setMilestoneMessage] = useState(null);
+  const [incomingShares, setIncomingShares] = useState([]);
+  const [incomingSharesLoading, setIncomingSharesLoading] = useState(false);
 
   const filteredPlaces = places.filter((place) => {
   const matchesSearch = place.name
@@ -290,6 +300,8 @@ const matchesFilter =
     mapRef.current.on("click", () => {
       setSelectedPlace(null);
       setShowAddSpot(false);
+      setSharingOpen(false);
+      setSelectedShareFriendIds([]);
 });
 
       setMapStarted(true);
@@ -357,10 +369,17 @@ if (imageFile) {
   console.log("Uploaded image URL:", uploadedImageUrl);
 }
 
+  console.log("Selected Mapbox place:", selectedMapboxPlace);
+
   const newPlace = {
     name: selectedMapboxPlace?.properties?.name || newName,
     neighborhood:
       selectedMapboxPlace?.properties?.place_formatted || newNeighborhood,
+
+      mapbox_id:
+        selectedMapboxPlace?.properties?.mapbox_id ||
+        selectedMapboxPlace?.id ||
+        null,
     
     status: "Wishlist",
     created_by_id: session?.user?.id,
@@ -416,7 +435,7 @@ const userId = session?.user?.id;
 
 const userSpotCount =
   places.filter(
-    (place) => place.created_by_id === userId
+    (place) => place.owner_id === userId
   ).length + 1;
 
 if (userSpotCount === 1) {
@@ -469,6 +488,8 @@ async function deleteSpot(placeToDelete) {
 
   setSelectedPlace(null);
   setConfirmDelete(false);
+  setSharingOpen(false);
+  setSelectedShareFriendIds([]);
 
   const { error } = await supabase
     .from("places")
@@ -482,6 +503,8 @@ async function deleteSpot(placeToDelete) {
 
   setSelectedPlace(null);
   setConfirmDelete(false);
+  setSharingOpen(false);
+  setSelectedShareFriendIds([]);
 }
 
 async function updatePlace(updatedPlace) {
@@ -504,6 +527,9 @@ async function updatePlace(updatedPlace) {
 }
 
 function updateRating(category, value) {
+    if (!isViewingOwnPerspective) {
+    return;
+  }
   const numericValue = value;
 
   const updatedPlace = {
@@ -657,6 +683,25 @@ useEffect(() => {
 }, [friendsOpen, session?.user?.id]);
 
 useEffect(() => {
+  if (!sharingOpen || !session?.user?.id) {
+    return;
+  }
+
+  loadFriendships();
+}, [sharingOpen, session?.user?.id]);
+
+useEffect(() => {
+  setSharingOpen(false);
+  setSelectedShareFriendIds([]);
+  setSharedPerspectives([]);
+  setActivePerspectiveUserId(session?.user?.id || null);
+
+  if (selectedPlace?.id && session?.user?.id) {
+    loadSharedPerspectives(selectedPlace.id);
+  }
+}, [selectedPlace?.id, session?.user?.id]);
+
+useEffect(() => {
   if (!session?.user?.email) {
     hasSetDefaultFilter.current = false;
     return;
@@ -698,6 +743,14 @@ useEffect(() => {
       .from("places")
       .select("*");
 
+      console.log("Places query result:", {
+  email: session?.user?.email,
+  userId: session?.user?.id,
+  count: data?.length,
+  data,
+  error,
+});
+
     if (error) {
       console.error(error);
       return;
@@ -712,6 +765,107 @@ useEffect(() => {
 
   loadPlaces();
 }, []);
+
+useEffect(() => {
+
+  if (!session?.user?.id) {
+    setIncomingShares([]);
+    return;
+  }
+
+  loadIncomingShares(session);
+}, [session?.user?.id]);
+
+async function loadIncomingShares(currentSession = session) {
+
+  const userId = currentSession?.user?.id;
+
+  if (!userId) {
+    setIncomingShares([]);
+    return;
+  }
+
+  setIncomingSharesLoading(true);
+
+const { data: shares, error: sharesError } = await supabase
+  .from("place_shares")
+  .select(`
+    id,
+    source_place_id,
+    shared_by,
+    shared_with,
+    status,
+    created_at
+  `)
+  .eq("shared_with", userId)
+  .eq("status", "pending")
+  .order("created_at", { ascending: false });
+
+  if (sharesError) {
+    console.error("Incoming shares error:", sharesError);
+    setIncomingSharesLoading(false);
+    return;
+  }
+
+ if (!shares?.length) {
+  console.log("Incoming shared spots: []");
+  setIncomingShares([]);
+  setIncomingSharesLoading(false);
+  return;
+}
+
+  const placeIds = [
+    ...new Set(shares.map((share) => share.source_place_id)),
+  ];
+
+  const senderIds = [
+    ...new Set(shares.map((share) => share.shared_by)),
+  ];
+
+  const [
+    { data: sharedPlaces, error: placesError },
+    { data: senders, error: sendersError },
+  ] = await Promise.all([
+    supabase
+      .from("places")
+      .select("*")
+      .in("id", placeIds),
+
+    supabase
+      .from("profile_directory")
+      .select("id, display_name, avatar_url")
+      .in("id", senderIds),
+  ]);
+
+  if (placesError) {
+    console.error("Shared places error:", placesError);
+  }
+
+  if (sendersError) {
+    console.error("Share sender profiles error:", sendersError);
+  }
+
+  const combinedShares = shares.map((share) => {
+    const place = sharedPlaces?.find(
+      (item) => item.id === share.source_place_id
+    );
+
+    const sender = senders?.find(
+      (item) => item.id === share.shared_by
+    );
+
+    return {
+      ...share,
+      place: place ? normalizePlace(place) : null,
+      sender: sender || null,
+    };
+  });
+
+  setIncomingShares(combinedShares);
+  setIncomingSharesLoading(false);
+
+  console.log("Incoming shared spots:", combinedShares);
+}
 
 async function signUp() {
   const { error } = await supabase.auth.signUp({
@@ -803,6 +957,35 @@ async function loadProfileDirectory() {
   setProfilesById(profileMap);
 }
 
+async function loadSharedPerspectives(placeId) {
+  if (!placeId || !session?.user?.id) {
+    setSharedPerspectives([]);
+    setActivePerspectiveUserId(null);
+    return;
+  }
+
+  setSharedPerspectivesLoading(true);
+
+  const { data, error } = await supabase.rpc(
+    "get_shared_place_perspectives",
+    {
+      p_place_id: placeId,
+    }
+  );
+
+  if (error) {
+    console.error("Shared perspectives error:", error);
+    setSharedPerspectives([]);
+    setActivePerspectiveUserId(session.user.id);
+    setSharedPerspectivesLoading(false);
+    return;
+  }
+
+  setSharedPerspectives(data || []);
+  setActivePerspectiveUserId(session.user.id);
+  setSharedPerspectivesLoading(false);
+}
+
 async function loadFriendships() {
   const currentUserId = session?.user?.id;
 
@@ -829,6 +1012,11 @@ async function loadFriendships() {
 
   const friendshipRows = data || [];
 
+  console.log("Loaded friendship rows:", {
+  currentUserId,
+  friendshipRows,
+});
+
   const incomingRequests = friendshipRows.filter(
     (friendship) =>
       friendship.addressee_id === currentUserId &&
@@ -840,6 +1028,10 @@ async function loadFriendships() {
   );
 
   setIncomingFriendRequests(incomingRequests);
+  console.log(
+  "Accepted friendships for current user:",
+  acceptedFriendships
+);
   setFriends(acceptedFriendships);
   setFriendsLoading(false);
 }
@@ -870,6 +1062,58 @@ async function searchForFriend() {
   }
 
   setFoundFriend(data?.[0] ?? null);
+}
+
+async function acceptSharedSpot(shareId) {
+  const { data: acceptedPlaceId, error } =
+    await supabase.rpc("accept_place_share", {
+      p_share_id: shareId,
+    });
+
+  if (error) {
+    console.error("Accept shared spot error:", error);
+    alert("The shared spot could not be accepted.");
+    return;
+  }
+
+  await loadIncomingShares(session);
+
+  const { data: refreshedPlaces, error: placesError } =
+    await supabase
+      .from("places")
+      .select("*");
+
+  if (placesError) {
+    console.error(
+      "Places refresh after share error:",
+      placesError
+    );
+    return;
+  }
+
+  setPlaces(
+    (refreshedPlaces || []).map(normalizePlace)
+  );
+
+  console.log("Accepted shared spot:", acceptedPlaceId);
+}
+
+async function declineSharedSpot(shareId) {
+  const { error } = await supabase
+    .from("place_shares")
+    .update({
+      status: "declined",
+      responded_at: new Date().toISOString(),
+    })
+    .eq("id", shareId);
+
+  if (error) {
+    console.error("Decline shared spot error:", error);
+    alert("The shared spot could not be declined.");
+    return;
+  }
+
+  await loadIncomingShares(session);
 }
 
 async function acceptFriendRequest(friendshipId) {
@@ -904,6 +1148,58 @@ async function declineFriendRequest(friendshipId) {
   }
 
   await loadFriendships();
+}
+
+async function shareSelectedPlace() {
+  if (
+    !session?.user?.id ||
+    !selectedPlace?.id ||
+    selectedShareFriendIds.length === 0
+  ) {
+    return;
+  }
+
+  const shareRows = selectedShareFriendIds.map(
+    (friendUserId) => ({
+      source_place_id: selectedPlace.id,
+      shared_by: session.user.id,
+      shared_with: friendUserId,
+      status: "pending",
+    })
+  );
+
+  const { error } = await supabase
+    .from("place_shares")
+    .insert(shareRows);
+
+  if (error) {
+    console.error("Place sharing error:", error);
+
+    alert(
+  `${error.code || "Unknown error"}: ${
+    error.message || "The spot could not be shared."
+  }`
+);
+
+    if (error.code === "23505") {
+      alert(
+        "This spot is already shared or pending with one of the selected friends."
+      );
+    } else {
+      alert("The spot could not be shared.");
+    }
+
+    return;
+  }
+
+  setSelectedShareFriendIds([]);
+  setSharingOpen(false);
+
+  alert(
+    selectedShareFriendIds.length === 1
+      ? "Spot shared."
+      : `Spot shared with ${selectedShareFriendIds.length} friends.`
+  );
 }
 
 async function sendFriendRequest() {
@@ -995,6 +1291,25 @@ const menuButtonStyle = {
   fontSize: 14,
   fontWeight: 500,
 };
+
+const activeSharedPerspective =
+  sharedPerspectives.find(
+    (perspective) =>
+      perspective.user_id === activePerspectiveUserId
+  ) || null;
+
+const displayedRatings =
+  activeSharedPerspective?.ratings ||
+  selectedPlace?.ratings ||
+  {};
+
+const displayedScore =
+  activeSharedPerspective?.score ??
+  selectedPlace?.score ??
+  null;
+
+  const isViewingOwnPerspective =
+  activePerspectiveUserId === session?.user?.id;
 
 return (
   <div
@@ -1495,6 +1810,8 @@ return (
   setSelectedPlace(null);
   setSearchQuery("");
   setActiveViewFilter("All");
+  setSharingOpen(false);
+  setSelectedShareFriendIds([]);
 }}
   style={{
     position: "absolute",
@@ -2026,6 +2343,113 @@ return (
         </div>
       </div>
 
+      <h3
+        style={{
+          margin: "0 0 10px",
+          color: "#1E2E45",
+          fontSize: 16,
+        }}
+      >
+        Shared Spots
+      </h3>
+
+      {incomingSharesLoading ? (
+        <p
+          style={{
+            margin: 0,
+            color: "#6B7280",
+            fontSize: 14,
+          }}
+        >
+          Loading...
+        </p>
+      ) : incomingShares.length === 0 ? (
+        <p
+          style={{
+            margin: 0,
+            color: "#6B7280",
+            fontSize: 14,
+          }}
+        >
+          No shared spots
+        </p>
+      ) : (
+        incomingShares.map((share) => (
+          <div
+            key={share.id}
+            style={{
+              padding: 12,
+              borderRadius: 14,
+              border: "1px solid rgba(15,23,42,0.08)",
+              background: "rgba(15,23,42,0.025)",
+              marginBottom: 10,
+            }}
+          >
+            <div
+              style={{
+                color: "#1E2E45",
+                fontSize: 15,
+                fontWeight: 600,
+              }}
+            >
+              {share.place?.name || "Shared spot"}
+            </div>
+
+            <div
+              style={{
+                marginTop: 4,
+                color: "#6B7280",
+                fontSize: 13,
+              }}
+            >
+              Shared by{" "}
+              {share.sender?.display_name || "Friend"}
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                marginTop: 12,
+              }}
+            >
+              <button
+                onClick={() => acceptSharedSpot(share.id)}
+                style={{
+                  flex: 1,
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  border: "none",
+                  background: "#1E2E45",
+                  color: "white",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Accept
+              </button>
+
+              <button
+                onClick={() => declineSharedSpot(share.id)}
+                style={{
+                  flex: 1,
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  border:
+                    "1px solid rgba(15,23,42,0.12)",
+                  background: "transparent",
+                  color: "#1E2E45",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Decline
+              </button>
+            </div>
+          </div>
+        ))
+      )}
+
       <div
         style={{
           height: 1,
@@ -2484,7 +2908,11 @@ return (
     }}
   >
     <button
-      onClick={() => setSelectedPlace(null)}
+  onClick={() => {
+    setSelectedPlace(null);
+    setSharingOpen(false);
+    setSelectedShareFriendIds([]);
+  }}
       style={{
         float: "right",
         border: "none",
@@ -2747,10 +3175,87 @@ return (
         letterSpacing: -1,
   }}
 >
-      {selectedPlace.score
-  ? selectedPlace.score.toFixed(1)
+      {displayedScore !== null
+  ? Number(displayedScore).toFixed(1)
   : "—"}
     </h1>
+
+{(sharedPerspectivesLoading ||
+  sharedPerspectives.length > 0) && (
+  <div
+    style={{
+      display: "flex",
+      gap: 6,
+      overflowX: "auto",
+      marginBottom: 14,
+      paddingBottom: 2,
+    }}
+  >
+    <button
+      onClick={() =>
+        setActivePerspectiveUserId(session?.user?.id)
+      }
+      style={{
+        flexShrink: 0,
+        padding: "8px 13px",
+        borderRadius: "12px 12px 4px 4px",
+        border:
+          activePerspectiveUserId === session?.user?.id
+            ? "1px solid rgba(30,46,69,0.20)"
+            : "1px solid rgba(15,23,42,0.07)",
+        background:
+          activePerspectiveUserId === session?.user?.id
+            ? "rgba(30,46,69,0.10)"
+            : "rgba(15,23,42,0.025)",
+        color: "#1E2E45",
+        cursor: "pointer",
+        fontSize: 13,
+        fontWeight:
+          activePerspectiveUserId === session?.user?.id
+            ? 700
+            : 500,
+      }}
+    >
+      {profile?.display_name || "Me"}
+    </button>
+
+    {sharedPerspectives.map((perspective) => (
+      <button
+        key={perspective.user_id}
+        onClick={() =>
+          setActivePerspectiveUserId(
+            perspective.user_id
+          )
+        }
+        style={{
+          flexShrink: 0,
+          padding: "8px 13px",
+          borderRadius: "12px 12px 4px 4px",
+          border:
+            activePerspectiveUserId ===
+            perspective.user_id
+              ? "1px solid rgba(30,46,69,0.20)"
+              : "1px solid rgba(15,23,42,0.07)",
+          background:
+            activePerspectiveUserId ===
+            perspective.user_id
+              ? "rgba(30,46,69,0.10)"
+              : "rgba(15,23,42,0.025)",
+          color: "#1E2E45",
+          cursor: "pointer",
+          fontSize: 13,
+          fontWeight:
+            activePerspectiveUserId ===
+            perspective.user_id
+              ? 700
+              : 500,
+        }}
+      >
+        {perspective.display_name || "Friend"}
+      </button>
+    ))}
+  </div>
+)}
 
 <div
   style={{
@@ -2761,7 +3266,7 @@ return (
     marginBottom: 20,
   }}
 >
-  {Object.entries(selectedPlace.ratings || {}).map(
+  {Object.entries(displayedRatings).map(
     ([category, value]) => (
       <div
         key={category}
@@ -2784,17 +3289,17 @@ return (
 
         <input
           value={value}
+          readOnly={!isViewingOwnPerspective}
+          tabIndex={isViewingOwnPerspective ? 0 : -1}
+
+          onMouseDown={(e) => {
+            if (!isViewingOwnPerspective) {
+              e.preventDefault();
+            }
+          }}
           onChange={(e) => 
             updateRating(category, e.target.value)
           }
-          onFocus={(e) => {
-           e.currentTarget.style.background =
-            "rgba(15,23,42,0.05)";
-          }}
-
-onBlur={(e) => {
-  e.currentTarget.style.background = "transparent";
-}}
           inputMode="decimal"
           style={{
             width: "100%",
@@ -2804,7 +3309,21 @@ onBlur={(e) => {
             border: "none",
             background: "transparent",
             outline: "none",
-            transition: "all 0.18s ease",
+
+            cursor: isViewingOwnPerspective
+          ? "text"
+          : "default",
+
+        caretColor: isViewingOwnPerspective
+          ? "#1E2E45"
+          : "transparent",
+            boxShadow: "none",
+          transition: "none",
+
+          pointerEvents: isViewingOwnPerspective
+            ? "auto"
+            : "none",
+
           }}
         />
       </div>
@@ -2846,6 +3365,195 @@ onBlur={(e) => {
     color: "#1F2937",
   }}
 />
+  <div
+    onClick={() =>
+      setSharingOpen((prev) => !prev)
+    }
+    style={{
+      marginTop: 18,
+      marginBottom: 6,
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      cursor: "pointer",
+      userSelect: "none",
+    }}
+  >
+    <span
+      style={{
+        fontSize: 13,
+        color: "#6B7280",
+        fontWeight: 500,
+      }}
+    >
+      Shared With
+    </span>
+
+    <span
+      style={{
+        fontSize: 18,
+        color: "#9CA3AF",
+      }}
+    >
+      {sharingOpen ? "−" : "+"}
+    </span>
+  </div>
+  {sharingOpen && (
+  <div
+    style={{
+      marginBottom: 16,
+      padding: 14,
+      borderRadius: 14,
+      background: "rgba(15,23,42,0.03)",
+      border: "1px solid rgba(15,23,42,0.05)",
+    }}
+  >
+    <div
+      style={{
+        fontSize: 13,
+        color: "#6B7280",
+        marginBottom: 12,
+        fontWeight: 600,
+      }}
+    >
+      Share this spot
+    </div>
+
+    {friends.length === 0 ? (
+  <div
+    style={{
+      fontSize: 14,
+      color: "#9CA3AF",
+    }}
+  >
+    No friends available
+  </div>
+) : (
+  <div
+    style={{
+      display: "flex",
+      flexDirection: "column",
+      gap: 8,
+    }}
+  >
+    {friends.map((friendship) => {
+      const currentUserId = session?.user?.id;
+
+      const friendUserId =
+        friendship.requester_id === currentUserId
+          ? friendship.addressee_id
+          : friendship.requester_id;
+
+      const friendProfile = profilesById[friendUserId];
+
+      const isSelected =
+        selectedShareFriendIds.includes(friendUserId);
+
+      return (
+        <label
+          key={friendship.id}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "10px 8px",
+            borderRadius: 12,
+            cursor: "pointer",
+            background: isSelected
+              ? "rgba(30,46,69,0.08)"
+              : "transparent",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => {
+              setSelectedShareFriendIds((current) =>
+                current.includes(friendUserId)
+                  ? current.filter(
+                      (id) => id !== friendUserId
+                    )
+                  : [...current, friendUserId]
+              );
+            }}
+          />
+
+          {friendProfile?.avatar_url ? (
+            <img
+              src={friendProfile.avatar_url}
+              alt={friendProfile.display_name}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: "50%",
+                objectFit: "cover",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: "50%",
+                background: "rgba(30,46,69,0.10)",
+                color: "#1E2E45",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 13,
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              {friendProfile?.display_name
+                ?.charAt(0)
+                ?.toUpperCase() || "?"}
+            </div>
+          )}
+
+          <span
+            style={{
+              color: "#1E2E45",
+              fontSize: 14,
+              fontWeight: 500,
+            }}
+          >
+            {friendProfile?.display_name || "Friend"}
+          </span>
+        </label>
+      );
+    })}
+  </div>
+)}
+<button
+  disabled={selectedShareFriendIds.length === 0}
+  onClick={shareSelectedPlace}
+  style={{
+    width: "100%",
+    marginTop: 14,
+    padding: "11px 12px",
+    borderRadius: 12,
+    border: "none",
+    background: "#1E2E45",
+    color: "white",
+    fontWeight: 600,
+    cursor:
+      selectedShareFriendIds.length === 0
+        ? "default"
+        : "pointer",
+    opacity:
+      selectedShareFriendIds.length === 0
+        ? 0.45
+        : 1,
+  }}
+>
+  Share
+  {selectedShareFriendIds.length > 0
+    ? ` (${selectedShareFriendIds.length})`
+    : ""}
+</button>
+  </div>
+)}
     <button
   onClick={() => setConfirmDelete(true)}
   style={{
