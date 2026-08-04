@@ -1314,6 +1314,16 @@ const displayedScore =
   selectedPlace?.score ??
   null;
 
+  const displayedImage =
+  activeSharedPerspective?.image ||
+  selectedPlace?.image ||
+  null;
+
+  const displayedNotes =
+  activeSharedPerspective?.notes ??
+  selectedPlace?.notes ??
+  "";
+
   const isViewingOwnPerspective =
   activePerspectiveUserId === session?.user?.id;
 
@@ -2986,9 +2996,9 @@ return (
   }}
 />
 
-{selectedPlace.image && (
+{displayedImage && (
   <img
-    src={selectedPlace.image}
+    src={displayedImage}
     alt={selectedPlace.name}
     style={{
       width: "100%",
@@ -3359,15 +3369,24 @@ return (
   )}
 </div>
     <textarea
-  value={selectedPlace.notes}
-  onChange={(e) => {
-    const updatedPlace = {
-      ...selectedPlace,
-      notes: e.target.value,
-    };
+      value={displayedNotes}
+      readOnly={!isViewingOwnPerspective}
+      tabIndex={isViewingOwnPerspective ? 0 : -1}
+      onMouseDown={(e) => {
+        if (!isViewingOwnPerspective) {
+          e.preventDefault();
+        }
+      }}
+      onChange={(e) => {
+  if (!isViewingOwnPerspective) return;
 
-    updatePlace(updatedPlace);
-  }}
+  const updatedPlace = {
+    ...selectedPlace,
+    notes: e.target.value,
+  };
+
+  updatePlace(updatedPlace);
+}}
   onFocus={(e) => {
   e.currentTarget.style.background =
     "rgba(15,23,42,0.05)";
