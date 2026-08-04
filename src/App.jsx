@@ -776,6 +776,12 @@ useEffect(() => {
   loadIncomingShares(session);
 }, [session?.user?.id]);
 
+useEffect(() => {
+  if (!isAdmin && activeViewFilter === "All") {
+    setActiveViewFilter("My Spots");
+  }
+}, [isAdmin, activeViewFilter]);
+
 async function loadIncomingShares(currentSession = session) {
 
   const userId = currentSession?.user?.id;
@@ -1311,6 +1317,11 @@ const displayedScore =
   const isViewingOwnPerspective =
   activePerspectiveUserId === session?.user?.id;
 
+  const mySpotsCount = places.filter(
+    (place) =>
+      place.owner_id === session?.user?.id
+  ).length;
+
 return (
   <div
     style={{
@@ -1540,10 +1551,27 @@ return (
 </div>
 
 {[
-  { label: `All (${places.length})`, value: "All" },
-  { label: "My Spots", value: "My Spots" },
-  { label: "Added by Corbin", value: "Added by Corbin" },
-  { label: "Added by Britni", value: "Added by Britni" },
+  {
+    label: `My Spots (${mySpotsCount})`,
+    value: "My Spots",
+  },
+
+  ...(isAdmin
+    ? [
+        {
+          label: `All (${places.length})`,
+          value: "All",
+        },
+        {
+          label: "Added by Corbin",
+          value: "Added by Corbin",
+        },
+        {
+          label: "Added by Britni",
+          value: "Added by Britni",
+        },
+      ]
+    : []),
 ].map((filter) => {
   const isSelected = activeViewFilter === filter.value;
 
